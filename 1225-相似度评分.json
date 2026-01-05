@@ -1,0 +1,327 @@
+{
+  "name": "1225-相似度评分",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        -140
+      ],
+      "id": "13be3a74-2d3f-4281-aafa-a7583dd36089",
+      "name": "When clicking ‘Execute workflow’",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nsimilar_jiras = [\n    {\n      \"kb_jiras\": [\n        \"{\\\"jira_id\\\": \\\"OTT-84706\\\", \\\"issue_description\\\": \\\"开机logo显示4秒后黑屏15秒，随后出现开机动画，总时长29秒\\\", \\\"reproduction_steps\\\": [\\\"Step1：在某版本系统环境下启动某设备\\\", \\\"Step2：观察开机流程，记录开机logo显示至开机动画结束的总时长\\\", \\\"Step3：确认开机logo显示4秒后是否出现15秒黑屏，随后是否正常显示开机动画\\\"], \\\"software_version\\\": \\\"Android U-14\\\", \\\"hardware_version\\\": \\\"None\\\", \\\"chip\\\": \\\"\\\", \\\"components\\\": \\\"System-Android\\\", \\\"key_error_logs\\\": \\\"\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"开机时出现logo与开机动画间黑屏时间较长，且伴随crash现象\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"uboot未传递\\\\\\\"vout=xxx,yyy\\\\\\\"类参数导致驱动初始化失败，客户环境变量数量未超32个但问题仍存在\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"应用相关补丁并检查bootloader改动，但因客户未提供日志且问题根源确认为客户侧改动，建议关闭此问题\\\"}], \\\"root_cause\\\": \\\"customer modify uboot，lead to vout\\\", \\\"how_to_fix\\\": \\\"customer revert the modification\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"客户修改了U-Boot导致vout参数缺失\\\"]}\",\n        \"{\\\"jira_id\\\": \\\"IPTV-36572\\\", \\\"issue_description\\\": \\\"开机动画播放前出现短暂黑屏，持续时间约1秒，随后正常进入系统界面\\\", \\\"reproduction_steps\\\": [\\\"Step1：启动某设备并上电开机\\\", \\\"Step2：观察开机动画播放过程\\\", \\\"Step3：在开机动画开始前检测到短暂黑屏现象\\\"], \\\"software_version\\\": \\\"Android R-11\\\", \\\"hardware_version\\\": \\\"S006-S905L4\\\", \\\"chip\\\": \\\"\\\", \\\"components\\\": \\\"System-Android\\\", \\\"key_error_logs\\\": \\\"\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"首次开机时开机视频前出现HDMI无信号现象，后续开机正常；录像在10s时出现闪黑，S5与GXLX4共用分支版本存在异常\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"闪黑问题源于BootAnimation与系统启动过程不同步，导致视频播放与系统初始化存在时间冲突\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"为BootAnimation增加等待MEDIA_STARTED的逻辑，实现开机视频播放与系统启动过程同步，验证通过\\\"}], \\\"root_cause\\\": \\\"开机过程黑屏\\\", \\\"how_to_fix\\\": \\\"在 BootAnimation 中增加等待 MEDIA_STARTED 的逻辑，使开机视频播放与系统启动过程同步，避免黑屏或延迟显示\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"BootAnimation与系统启动过程不同步导致视频播放与系统初始化时间冲突\\\"]}\",\n        \"{\\\"jira_id\\\": \\\"IPTV-36905\\\", \\\"issue_description\\\": \\\"设备重启后黑屏约11秒才显示开机logo，对比江苏设备仅需6秒；内核日志显示触发sysrq_handle_showstate及write_sysrq_trigger相关调用\\\", \\\"reproduction_steps\\\": [\\\"Step1：启动某设备并进入某版本系统环境\\\", \\\"Step2：执行设备重启操作并观察屏幕状态\\\", \\\"Step3：记录从重启完成到开机logo显示的延迟时间及内核日志信息\\\"], \\\"software_version\\\": \\\"Android P-9.0\\\", \\\"hardware_version\\\": \\\"AC20BK-S905L3AP\\\", \\\"chip\\\": \\\"\\\", \\\"components\\\": \\\"System-Android\\\", \\\"key_error_logs\\\": \\\"\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"某设备重启后黑屏11秒，相较其他版本明显更慢，且kernel日志中出现\\\\\\\"init: do_umount2\\\\\\\"失败并触发线程状态信息打印\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"第三方应用探针与系统共享同一bin文件，导致资源持续占用引发重启超时\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"在待机前停止第三方应用的后台服务以规避问题\\\"}], \\\"root_cause\\\": \\\"和第三方应用探针使用了一个bin文件,这个bin文件持续占用了系统,从而导致重启超时.\\\", \\\"how_to_fix\\\": \\\"客户自行修改，验证OK了\\\\r\\\\n规避方法：待机前，把这个第三方应用的后台服务给停了\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"第三方应用探针与系统共享同一bin文件导致资源持续占用\\\"]}\",\n        \"{\\\"jira_id\\\": \\\"OTT-83788\\\", \\\"issue_description\\\": \\\"开机动画结束后至进入launcher期间出现持续10-15秒的黑屏现象，随后正常进入系统界面\\\", \\\"reproduction_steps\\\": [\\\"Step1：在某版本系统环境下，使用S905X4设备进行首次开机或恢复出厂设置后启动\\\", \\\"Step2：观察开机动画结束后至进入launcher期间的屏幕状态\\\", \\\"Step3：在该阶段出现持续10-15秒的黑屏现象，随后正常进入系统界面\\\"], \\\"software_version\\\": \\\"Android S-12\\\", \\\"hardware_version\\\": \\\"AH21E6-S905X4\\\", \\\"chip\\\": \\\"\\\", \\\"components\\\": \\\"System-Android\\\", \\\"key_error_logs\\\": \\\"NA\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"正常开机场景下黑屏持续5-6秒，launcher启动后第一帧显示慢导致资源加载耗时达5秒，系统线程未出现卡顿但trace显示存在短暂黄色线程\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"文件读写性能受限是根本原因，与硬件配置强相关，小容量DDR和eMMC环境下filecache易被回收导致加载延迟\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"通过优化dex2oat流程减少任务负载并延长开机动画时间，需客户自行评估是否启用补丁并测试XTS影响，SELinux权限问题需客户自行修复\\\"}], \\\"root_cause\\\": \\\"1. fallbackhome\\\\r\\\\n2. 客户自己launcher问题\\\", \\\"how_to_fix\\\": \\\"1. 提供延长开机动画patch\\\\r\\\\n2. 客户自己查\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"文件读写性能受限导致加载延迟\\\", \\\"小容量DDR和eMMC环境下filecache被回收\\\"]}\",\n        \"{\\\"jira_id\\\": \\\"SWPL-247365\\\", \\\"issue_description\\\": \\\"开机logo与开机动画间出现数秒黑屏，开机动画与launcher显示前出现数秒黑屏\\\", \\\"reproduction_steps\\\": [\\\"Step1：将某设备设置为不连接TX状态\\\", \\\"Step2：执行冷启动操作并观察开机流程\\\", \\\"Step3：确认开机logo与开机动画间、开机动画与launcher显示前出现黑屏现象\\\"], \\\"software_version\\\": \\\"Android B-16\\\", \\\"hardware_version\\\": \\\"\\\", \\\"chip\\\": \\\"S905D5\\\", \\\"components\\\": \\\"Display-Graphics\\\", \\\"key_error_logs\\\": \\\"\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"在本地复现开机流程时，logcat显示两次lcd模式设置，第一次为viu2 600p模式导致logo至开机动画间的黑屏\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"识别到hwc初始化后因tx未接通触发的第二次lcd viu1 600p模式切换，当前不视为异常\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"暂不处理该切换，待有release需求时再评估，现阶段关闭问题\\\"}], \\\"root_cause\\\": \\\"\\\", \\\"how_to_fix\\\": \\\"\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"由于TX未接通导致hwc初始化后触发LCD模式切换，引发开机logo与开机动画间出现黑屏\\\", \\\"由于第一次设置Viu2 600p模式，导致开机logo至开机动画间出现数秒黑屏\\\"]}\",\n        \"{\\\"jira_id\\\": \\\"SWPL-228248\\\", \\\"issue_description\\\": \\\"从待机状态唤醒时屏幕保持黑屏状态超过预期时长\\\", \\\"reproduction_steps\\\": [\\\"Step1：在某设备上启动某应用并播放某片源\\\", \\\"Step2：按电源键使设备进入待机状态\\\", \\\"Step3：等待待机完成后再按电源键尝试唤醒设备\\\", \\\"Step4：观察屏幕从黑屏到正常显示的延迟时间\\\"], \\\"software_version\\\": \\\"Android U-14\\\", \\\"hardware_version\\\": \\\"\\\", \\\"chip\\\": \\\"\\\", \\\"components\\\": \\\"Android-NTS\\\", \\\"key_error_logs\\\": \\\"\\\", \\\"comments\\\": [{\\\"level\\\": \\\"复现方式与现象\\\", \\\"description\\\": \\\"复测20次中黑屏时长均控制在5秒内，较原视频中的11秒有显著改善\\\"}, {\\\"level\\\": \\\"定位结果\\\", \\\"description\\\": \\\"最后一次复现长时间黑屏时，kernel log显示resume后约8秒无日志打印\\\"}, {\\\"level\\\": \\\"解决方案\\\", \\\"description\\\": \\\"需补充串口日志以进一步定位卡顿或hang点的具体位置\\\"}], \\\"root_cause\\\": \\\"\\\", \\\"how_to_fix\\\": \\\"\\\", \\\"patch_list\\\": [], \\\"doc_link\\\": [], \\\"source\\\": \\\"\\\", \\\"problem_causes\\\": [\\\"从待机状态唤醒时系统resume后无日志打印导致屏幕黑屏延迟\\\"]}\"\n      ]\n    }\n  ]\n\nuser_jira = \"\"\"{\n  \"jira_id\": \"OTT-71037\",\n  \"issue_description\": \"设备启动过程中屏幕保持黑屏状态，持续时间显著超出正常范围，导致用户感知延迟\",\n  \"reproduction_steps\": [\n    \"Step1：在某版本 Rom 环境下启动某设备，进入开机流程\",\n    \"Step2：观察屏幕显示状态，记录从开机到屏幕出现画面的时长\",\n    \"Step3：重复操作多次，确认黑屏时间持续过长且未出现正常显示响应\"\n  ],\n  \"software_version\": \"Android U-14\",\n  \"hardware_version\": \"BM20AL-S905X5M\",\n  \"comments\": [\n    {\n      \"level\": \"复现方式与现象\",\n      \"description\": \"客户设备在使用一段时间后出现开机黑屏时间长达20秒以上，Launcher的MainActivity在onCreate过程中调用FragmentActivity的onCreate存在约3秒延迟，导致整体启动时间从1分20秒内逐渐增长至1分50秒，恢复出厂设置后可恢复至正常水平，但后续使用中又会逐渐变慢。\"\n    },\n    {\n      \"level\": \"定位结果\",\n      \"description\": \"经分析客户提供的trace及bugreport日志，未在trace中明确看到3秒卡顿的具体原因，也未发现Launcher onCreate过程中的明显性能瓶颈，系统CPU占用率高（用户态39%、内核态52%）、内存紧张但lowmemorykiller未触发杀进程动作，问题倾向为应用层逻辑或资源加载效率问题，尚未确认是否为SDK或Launcher代码缺陷。\"\n    },\n    {\n      \"level\": \"解决方案\",\n      \"description\": \"计划通过在客户设备上进行随机monkey测试，对比有故障与无故障设备的trace差异，以定位Launcher启动延迟的关键点，同时申请P0级别支持进一步排查系统LMK策略是否缺失，以验证内存压力下进程管理机制的有效性。\"\n    }\n  ],\n  \"problem_causes\": [\n    \"由于Launcher的MainActivity在onCreate过程中调用FragmentActivity的onCreate存在约3秒延迟，导致整体启动时间显著延长\",\n    \"系统在开机过程中CPU占用率高且内存紧张，但lowmemorykiller未触发杀进程动作，导致应用层资源加载效率低下\"\n  ]\n}\"\"\"\noutput = {\n  'similar_jiras':[],\n  'user_jira':\"\"\n}\noutput['similar_jiras'] = similar_jiras[0]['kb_jiras']\noutput['user_jira'] = user_jira\nreturn output"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -140
+      ],
+      "id": "f645407f-a78a-4ab1-855c-810f32e7678e",
+      "name": "Code",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1240,
+        0
+      ],
+      "id": "f17c05fc-fb24-43c5-a276-2f1bc8a65c8e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "similar_comments",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        900,
+        0
+      ],
+      "id": "af08983a-e8b1-4334-b66e-ce9ca6f39302",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:1235/compare/sklearn",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_causes\": {{ $json.user_comment_problem_cause }},\n  \"similar_causes\": {{ $json.similar_comment_problem_cause }}\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        20
+      ],
+      "id": "3ce8b858-e8a1-4e4c-a9d3-9c872bcce3f8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "user_jira.problem_causes"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        -220
+      ],
+      "id": "ca414750-8ad8-40af-becb-572819c9f39b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "similar_jiras",
+              "type": "array"
+            },
+            {
+              "name": "user_jira"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        100
+      ],
+      "id": "48925d9f-ffae-4769-be90-3f4b8860c634",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1480,
+        -220
+      ],
+      "id": "a1771cb6-a113-478b-8cdb-99ca9707ece4",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "95ec9bc4-68c2-4ca2-9df5-680c0b135389",
+              "name": "similar_jira",
+              "value": "={{ $('Loop Over Items').item.json.similar_jira }}",
+              "type": "string"
+            },
+            {
+              "id": "1a2c1d23-edb3-4afe-99fc-064e555b6942",
+              "name": "user_jira",
+              "value": "={{ $('Loop Over Items').item.json.user_jira }}",
+              "type": "string"
+            },
+            {
+              "id": "30efa557-8253-4872-b715-b0d1bc26ae31",
+              "name": "similar_comment_problem_cause",
+              "value": "={{ $('Loop Over Items').item.json.similar_comment_problem_cause }}",
+              "type": "string"
+            },
+            {
+              "id": "2ebb9215-90d7-4049-a244-b6b25e6224ef",
+              "name": "user_comment_problem_cause",
+              "value": "={{ $('Loop Over Items').item.json.user_comment_problem_cause }}",
+              "type": "string"
+            },
+            {
+              "id": "c6f30ceb-46d6-4c50-a4bf-77747ee13d1e",
+              "name": "similar_comment_problem_cause_score",
+              "value": "={{ $json.max_score }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        20
+      ],
+      "id": "8c95c843-d190-409a-81b3-3a26cc6c27d6",
+      "name": "汇总输出"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\nsimilar_comments = []\n\nfor item in _input.all():\n    json_item = item[\"json\"]\n    user_jira_str = json_item[\"user_jira\"]\n    similar_jira_list = json_item[\"similar_jiras\"]\n    user_jira = json.loads(user_jira_str)\n    for similar_jira_str in similar_jira_list:\n        # 每条 similar_jira 是一个 JSON 字符串\n        similar_jira = json.loads(similar_jira_str)\n\n        similar_comment = {\n            \"similar_jira\": similar_jira_str,\n            \"user_jira\": user_jira_str,\n            \"similar_comment_problem_cause\": json.dumps(similar_jira.get(\"problem_causes\", []), ensure_ascii=False),\n            \"user_comment_problem_cause\": json.dumps(user_jira.get(\"problem_causes\", []),ensure_ascii=False),\n            \"similar_comment_problem_cause_score\": 0\n        }\n\n        similar_comments.append(similar_comment)\n\nreturn [\n    {\n        \"similar_comments\": similar_comments\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        40
+      ],
+      "id": "64bdf85f-d738-47a3-9c9f-558047d60bfb",
+      "name": "合并user与"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\n# =========================\n# 工具函数\n# =========================\ndef safe_json_load(s, default=None):\n    if default is None:\n        default = []\n    if not s:\n        return default\n    if isinstance(s, (list, dict)):\n        return s\n    try:\n        return json.loads(s)\n    except Exception:\n        return default\n\ndef similarity_desc(score):\n    if score >= 7:\n        return \"根因高度相似，可能为同一类启动链路问题\"\n    elif score >= 4:\n        return \"存在一定关联，可能发生在相同启动阶段\"\n    else:\n        return \"根因不同，场景或模块差异明显\"\n\n# =========================\n# 读取 n8n 输入\n# =========================\nitems_in = items\n\nrows = []\n\n# =========================\n# 1️⃣ 处理 user_jira（只取一次）\n# =========================\nfirst = items_in[0][\"json\"]\nuser_jira = safe_json_load(first.get(\"user_jira\"), {})\n\nuser_jira_id = user_jira.get(\"jira_id\", \"-\")\nuser_scene = user_jira.get(\"issue_description\", \"-\")\nuser_causes = user_jira.get(\"problem_causes\", [])\n\nuser_root_cause = \"；\".join(user_causes) if user_causes else \"-\"\n\nrows.append({\n    \"jira\": f\"**{user_jira_id}（查询的 JIRA）**\",\n    \"scene\": user_scene,\n    \"cause\": user_root_cause,\n    \"score\": \"—\",\n    \"desc\": \"—\"\n})\n\n# =========================\n# 2️⃣ 处理 similar_jira\n# =========================\nsimilar_rows = []\n\nfor it in items_in:\n    data = it[\"json\"]\n\n    similar_jira = safe_json_load(data.get(\"similar_jira\"), {})\n    jira_id = similar_jira.get(\"jira_id\", \"-\")\n    scene = similar_jira.get(\"issue_description\", \"-\")\n\n    causes = safe_json_load(data.get(\"similar_comment_problem_cause\"))\n    cause_text = \"；\".join(causes) if causes else \"-\"\n\n    raw_score = data.get(\"similar_comment_problem_cause_score\", 0)\n    score_0_10 = round(raw_score * 10, 2)\n\n    similar_rows.append({\n        \"jira\": jira_id,\n        \"scene\": scene,\n        \"cause\": cause_text,\n        \"score\": score_0_10,\n        \"desc\": similarity_desc(score_0_10)\n    })\n\n# 按相似度排序\nsimilar_rows.sort(key=lambda x: x[\"score\"], reverse=True)\n\nrows.extend(similar_rows)\n\n# =========================\n# 3️⃣ 生成 Markdown 表格\n# =========================\nmd = []\nmd.append(\"| 条目 | 触发场景/测试用例 | 根因信息 | 相似度(0–10) | 相似原因简述 |\")\nmd.append(\"|------|------------------|-----------|---------------|---------------|\")\n\nfor r in rows:\n    md.append(\n        f\"| {r['jira']} | {r['scene']} | {r['cause']} | {r['score']} | {r['desc']} |\"\n    )\n\nfinal_md = \"\\n\".join(md)\n\nreturn [\n    {\n        \"json\": {\n            \"output\": final_md\n        }\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        -100
+      ],
+      "id": "c604e9f6-571d-43e0-94bc-71318ea90aa7",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "合并user与",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "合并user与",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "汇总输出",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "汇总输出": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "合并user与": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4e920a92-f83f-4433-b4d4-88d5ba187ce6",
+  "meta": {
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "AwyTFsL9KruxgZYW",
+  "tags": []
+}

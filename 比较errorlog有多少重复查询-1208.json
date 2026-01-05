@@ -1,0 +1,1226 @@
+{
+  "name": "比较errorlog有多少重复查询-1208",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "653544ef-29b8-47a0-abd3-9d486cb05591",
+              "name": "=authorization",
+              "value": "fastgpt-xxVOCWkOre8Q1szSLicBgmqhyuvfO5A9nbLk40rsjIVqmRSdMhMOUw51",
+              "type": "string"
+            },
+            {
+              "id": "f995b317-0242-4180-a0e1-2c20587827c9",
+              "name": "datasetid",
+              "value": "692948343d4f6227b2abba2d",
+              "type": "string"
+            },
+            {
+              "id": "7eacde4d-6ccc-4ef8-8d87-717893c3b132",
+              "name": "appid",
+              "value": "69295e9a3d4f6227b2abd20f",
+              "type": "string"
+            },
+            {
+              "id": "2421b2d2-f8a1-4a28-bb12-e73602c9c230",
+              "name": "1128-jira检查app-api",
+              "value": "fastgpt-hDRWg3sKXu2mdZaTvXmfv1kaL6uAMxkrQO9oTRpm60WefI200D4Ra27C",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        0
+      ],
+      "id": "309131ba-cacc-4d4e-bd2a-dabb7f023c45",
+      "name": "fastgpt个人api",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae1b2463-ae4b-4073-a35f-803b5acf0b83",
+              "name": "user_query",
+              "value": "强制补丁发布之后无法应用",
+              "type": "string"
+            },
+            {
+              "id": "6659fb6e-33d3-465e-bc8c-6ede8c4cfa70",
+              "name": "uid",
+              "value": "qwertyuio-123456",
+              "type": "string"
+            },
+            {
+              "id": "e6732ee5-7a6a-43c5-8feb-f0fde3dec134",
+              "name": "name",
+              "value": "zhansan",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "id": "80a1bed2-287d-4952-b946-5ba2eb8d904e",
+      "name": "用户查询",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.18.11.98:3000/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json[\"1128-jira检查app-api\"] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stream\": false,\n  \"detail\": false,\n  \"variables\": {\n    \"uid\": \"{{ $('用户查询').item.json.uid }}\",\n    \"name\": \"{{ $('用户查询').item.json.name }}\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('用户查询').item.json.user_query }}\"\n    }\n  ]\n} ",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "fc541592-d9c8-4ff8-8aa3-fec0b891f35c",
+      "name": "检索-fastgpt-1128-jira检查",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57f62e60-7688-4614-b3a5-e6777d73047d",
+              "name": "RAG返回内容",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        0
+      ],
+      "id": "67959629-f561-433e-b111-6af918d3eeb5",
+      "name": "接受RAG返回内容",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\nimport json\n\n# 输入\nraw_text = _input.all()[0][\"json\"].get(\"RAG返回内容\", \"\")\n\nresult = {\n    \"summary\": \"\",\n    \"similar_jira_ids\": [],\n    \"similar_answers\": {}\n}\n\n# ---------- 1. 提取总结（去掉“相似的jira_id有：”之后的部分） ----------\nsummary_match = re.split(r\"相似的jira_id有：\", raw_text)\nif summary_match:\n    result[\"summary\"] = summary_match[0].strip()\n\n# ---------- 2. 提取相似的 jira id ----------\njira_match = re.search(r\"相似的jira_id有：([A-Za-z0-9\\-_, ]+)\", raw_text)\nif jira_match:\n    raw_ids = jira_match.group(1).strip()\n    # 支持多个 id（用逗号、空格分隔）\n    ids = re.split(r\"[,\\s]+\", raw_ids)\n    result[\"similar_jira_ids\"] = [i for i in ids if i]\n\n# ---------- 3. 提取相似的 answer JSON ----------\nanswer_match = re.search(r\"相似的answer有：(\\{[\\s\\S]*?\\})\", raw_text)\nif answer_match:\n    ans_text = answer_match.group(1).strip()\n\n    # 尝试解析 JSON\n    try:\n        result[\"similar_answers\"] = json.loads(ans_text)\n    except:\n        # 如果格式不标准，进行清洗后再解析\n        try:\n            cleaned = ans_text.replace(\"\\n\", \" \").replace(\"\\r\", \" \")\n            result[\"similar_answers\"] = json.loads(cleaned)\n        except:\n            result[\"similar_answers\"] = {\"raw_text\": ans_text}\n\n# ---------- 输出 ----------\nreturn [{\n    \"json\": result\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "d77d16d7-f78c-4647-8636-f902973e1781",
+      "name": "Code",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2080,
+        0
+      ],
+      "id": "d60fa32e-fa83-4e7a-a87a-99a1389f4c46",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/amlogic/FAE/AutoLog/error_logs_identification_git/AutoTestRes/AIWizard/tools/error_log_Identification/jira_comment_task/data/{{ $json.user_key }}/comment_data.json",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2360,
+        20
+      ],
+      "id": "1b6f4f94-364c-4ee9-9b85-34e489d379f0",
+      "name": "Read/Write Files from Disk",
+      "alwaysOutputData": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        20
+      ],
+      "id": "cad75959-4603-4708-8145-e388c7a1fb3f",
+      "name": "Extract from File",
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {
+          "destinationFieldName": "file"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3520,
+        40
+      ],
+      "id": "47df28e3-1c02-4065-a322-2c2b47a525f8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "file",
+        "options": {
+          "destinationFieldName": "result"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3740,
+        40
+      ],
+      "id": "eb3d34a7-6592-4382-9aca-bb47e821b74b",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e00709ef-6fdb-47f6-ba45-1e2369a02981",
+              "name": "key",
+              "value": "={{ $('Loop Over Items').item.json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "49000ac6-27bb-4042-b408-b90d7248f48c",
+              "name": "module",
+              "value": "={{ $json.result[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "7b630e66-aa3e-49d9-9ac5-86d24b600304",
+              "name": "percent",
+              "value": "={{ $json.result[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "51fd7a78-cfa7-46ee-9975-e68d09c73c5d",
+              "name": "match_log",
+              "value": "={{ $json.result[2] }}",
+              "type": "string"
+            },
+            {
+              "id": "31eff128-756f-4261-b675-7ddfbce19983",
+              "name": "db_log",
+              "value": "={{ $json.result[3] }}",
+              "type": "string"
+            },
+            {
+              "id": "69aef98c-e6ed-43e1-8a48-8b61540ccd77",
+              "name": "reason",
+              "value": "={{ $json.result[4] }}",
+              "type": "string"
+            },
+            {
+              "id": "954289ef-5c99-4d4c-9b2f-0486a0a454fb",
+              "name": "relative_jira",
+              "value": "={{ $json.result[5] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3960,
+        40
+      ],
+      "id": "33a250c0-bf03-4c54-b156-285b6b5eec80",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b4a3e57a-314e-4343-8157-696c8d84f612",
+              "name": "key",
+              "value": "={{ $json.similar_jira_ids }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1560,
+        0
+      ],
+      "id": "cc67bab7-3e39-44a5-bd1d-0fb218d371ab",
+      "name": "提取jira_id",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e0bf960-ec70-4962-bfee-06c9ce57e3d4",
+              "name": "=user_key",
+              "value": "={{ $('When Executed by Another Workflow').item.json.user_key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        0
+      ],
+      "id": "a8c30d8d-c8ae-4299-bec5-17cc60584db4",
+      "name": "组合为本地文件"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9d42cfd4-290e-454f-bc43-a71e36679cf7",
+              "name": "db_log",
+              "value": "={{ $json.db_log }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2300,
+        -240
+      ],
+      "id": "a365c03b-5bd3-4693-85ff-7a99ea29be0e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "db_log",
+              "renameField": true,
+              "outputFieldName": "user_log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        -240
+      ],
+      "id": "e24bfbd8-74f9-4a1a-a3b8-b0483423e67a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 统计相同db_log的数量\ndb_log_count = {}\nfor item in _input.all():\n    db_log = item.json['db_log']\n    if db_log in db_log_count:\n        db_log_count[db_log] += 1\n    else:\n        db_log_count[db_log] = 1\n\n# 创建去重的结果，只保留db_log和次数\nresult = []\nfor db_log, count in db_log_count.items():\n    result.append({\n        'db_log': db_log,\n        'db_log_count': count\n    })\n\nreturn result"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4180,
+        40
+      ],
+      "id": "5a9345f6-b93d-4b80-94d4-5569ef2a4089",
+      "name": "去重合并log"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "similar_jira_ids",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        0
+      ],
+      "id": "5b48a9e3-ba7d-4c75-a637-d1221d2cdb01",
+      "name": "Split Out2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2000,
+        600
+      ],
+      "id": "0dae4e70-4c34-4cba-956a-0cfe6c732724",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/amlogic/FAE/AutoLog/error_logs_identification_git/AutoTestRes/AIWizard/tools/error_log_Identification/jira_comment_task/data/{{ $json.db_key }}/comment_data.json",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        620
+      ],
+      "id": "9e4ce6e6-8c88-4c7d-9d09-9c91d83a5637",
+      "name": "Read/Write Files from Disk1",
+      "alwaysOutputData": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2580,
+        620
+      ],
+      "id": "4198ff61-55bf-4752-8348-16153829c08f",
+      "name": "Extract from File1",
+      "alwaysOutputData": true,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {
+          "destinationFieldName": "file"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3220,
+        640
+      ],
+      "id": "1b155107-d307-4a12-b9b2-91637e2446a0",
+      "name": "Split Out3"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "file",
+        "options": {
+          "destinationFieldName": "result"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        640
+      ],
+      "id": "b40b59c2-e991-4a2f-b77a-5d7f7aab9374",
+      "name": "Split Out4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e00709ef-6fdb-47f6-ba45-1e2369a02981",
+              "name": "key",
+              "value": "={{ $('Loop Over Items1').item.json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "49000ac6-27bb-4042-b408-b90d7248f48c",
+              "name": "module",
+              "value": "={{ $json.result[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "7b630e66-aa3e-49d9-9ac5-86d24b600304",
+              "name": "percent",
+              "value": "={{ $json.result[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "51fd7a78-cfa7-46ee-9975-e68d09c73c5d",
+              "name": "match_log",
+              "value": "={{ $json.result[2] }}",
+              "type": "string"
+            },
+            {
+              "id": "31eff128-756f-4261-b675-7ddfbce19983",
+              "name": "db_log",
+              "value": "={{ $json.result[3] }}",
+              "type": "string"
+            },
+            {
+              "id": "69aef98c-e6ed-43e1-8a48-8b61540ccd77",
+              "name": "reason",
+              "value": "={{ $json.result[4] }}",
+              "type": "string"
+            },
+            {
+              "id": "954289ef-5c99-4d4c-9b2f-0486a0a454fb",
+              "name": "relative_jira",
+              "value": "={{ $json.result[5] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3660,
+        640
+      ],
+      "id": "df24b726-e3f0-480e-989f-4db5e297a5da",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fe863175-ae03-4be6-bb65-d259bc9e0a89",
+              "leftValue": "={{$json.data}}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2820,
+        620
+      ],
+      "id": "ec887e41-f1b8-4cf8-be42-95e10fea91f6",
+      "name": "If1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e0bf960-ec70-4962-bfee-06c9ce57e3d4",
+              "name": "db_key",
+              "value": "={{ $json.db_key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        600
+      ],
+      "id": "8fa9e83c-5d18-4b15-9eaf-333970bfdb58",
+      "name": "组合为本地文件1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9d42cfd4-290e-454f-bc43-a71e36679cf7",
+              "name": "db_log",
+              "value": "={{ $json.db_log }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2220,
+        360
+      ],
+      "id": "c7d08e25-0e13-4a63-8ff3-c078d52aba25",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "db_log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2440,
+        360
+      ],
+      "id": "09a78390-e849-423a-8b11-20dfa205ddca",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 统计相同db_log的数量\ndb_log_count = {}\nfor item in _input.all():\n    db_log = item.json['db_log']\n    if db_log in db_log_count:\n        db_log_count[db_log] += 1\n    else:\n        db_log_count[db_log] = 1\n\n# 创建去重的结果，只保留db_log和次数\nresult = []\nfor db_log, count in db_log_count.items():\n    result.append({\n        'db_log': db_log,\n        'db_log_count': count\n    })\n\nreturn result"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3880,
+        640
+      ],
+      "id": "a550b170-f304-47df-8048-3c5ecce35ad3",
+      "name": "去重合并log1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3380,
+        -240
+      ],
+      "id": "4a9a6e79-eea0-442f-9f43-1fb0ed4f8360",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "user_log"
+            },
+            {
+              "fieldToAggregate": "db_log"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3600,
+        -240
+      ],
+      "id": "0879da5b-0172-4adf-be63-a523e09bb1ba",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 取得输入数据（n8n 的 Python 节点输入）\nitem = items[0][\"json\"]\n\n# 提取日志数组（数据结构是二维数组，所以取索引 0）\nuser_logs = item[\"user_log\"]\ndb_logs = item[\"db_log\"]\n\n# 转为集合，加速查找\ndb_set = set(db_logs)\n\n# 计算相同 log\nsame_logs = [log for log in user_logs if log in db_set]\n\n# 返回结果给 n8n\nreturn {\n    \"same_count\": len(same_logs),\n    # \"same_logs\": same_logs\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3820,
+        -240
+      ],
+      "id": "647c8203-663f-46b9-b227-f46071917bad",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_key"
+            },
+            {
+              "name": "db_key"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "508f702b-2e28-45ac-afce-1663686998cb",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fe863175-ae03-4be6-bb65-d259bc9e0a89",
+              "leftValue": "={{$json.data}}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2900,
+        20
+      ],
+      "id": "71c79b38-a43b-49e4-9d34-66f9c6958a02",
+      "name": "If",
+      "retryOnFail": false,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "\nreturn {\n        'db_log': None,\n        'db_log_count': 0\n    }"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3240,
+        240
+      ],
+      "id": "f0b6e896-91eb-4a01-a65a-0752bcd1516d",
+      "name": "去重合并log2"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "\nreturn {\n        'db_log': None,\n        'db_log_count': 0\n    }"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        920
+      ],
+      "id": "f89c481d-5a6a-45ed-8d00-09f8fbe5729e",
+      "name": "去重合并log3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "fastgpt个人api": {
+      "main": [
+        [
+          {
+            "node": "检索-fastgpt-1128-jira检查",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "用户查询": {
+      "main": [
+        [
+          {
+            "node": "fastgpt个人api",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "检索-fastgpt-1128-jira检查": {
+      "main": [
+        [
+          {
+            "node": "接受RAG返回内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "接受RAG返回内容": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "去重合并log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Split Out2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取jira_id": {
+      "main": [
+        [
+          {
+            "node": "组合为本地文件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "组合为本地文件": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去重合并log": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out2": {
+      "main": [
+        [
+          {
+            "node": "提取jira_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out3": {
+      "main": [
+        [
+          {
+            "node": "Split Out4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "去重合并log1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Split Out3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "去重合并log3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "组合为本地文件1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去重合并log1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "用户查询",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "组合为本地文件1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "去重合并log2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去重合并log2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去重合并log3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d480722a-8a21-4101-bb4d-d8d05efc232e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "PRXgPHj3btc2FugA",
+  "tags": []
+}

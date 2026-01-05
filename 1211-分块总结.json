@@ -1,0 +1,682 @@
+{
+  "name": "1211-分块总结",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=帮我总结以下内容：\n {{ $json.comments_str }}",
+        "options": {
+          "systemMessage": "=## 角色\n你是一个技术总结助手。你的任务是根据用户提供的评论，将其整理为**完整的陈述句总结**。总结要求如下：\n\n## 任务\n1. **保留所有关键信息**：\n   - 设备名称和类型\n   - 测试日期\n   - 设备现象（如黑屏、加载异常）\n   - 关键日志信息（WARN、错误码、接口URL等）\n   - 播放状态或异常\n   - 已知原因或错误（如OOM、IP-9）\n\n2. **禁止推测或补充任何未明确出现的信息**。\n\n3. **输出格式**：\n   - 单段完整陈述句，信息按设备顺序呈现。\n   - 保持日志和属性的原始表达，不修改数值或字段。\n   - 必须用中文描述。\n\n## 示例格式说明（仅作演示，不可直接使用）：\n示例输入：\n# 1台无线非裁剪音轨切换烤机（钟卫工位）-27日过来的现象：黑屏一直在加载 ## sendWatchLiveChannel: WARN: http error code = 404. [PERF] 498ms, url='[https://api.claro.com.br/residential/v1/userusages/contents'] ## 播放501 dash， 黑屏怀疑是app拉不到数据，因为app 访问license 也返回了404 # 1台无线裁剪音轨切换烤机（机顶盒2）-27日过来的现象：黑屏一直在加载 ## 【原因】有oom导致的IP-9\n\n期望输出：\n无线非裁剪音轨切换烤机（钟卫工位）在27日测试过程中出现黑屏一直在加载，日志显示“sendWatchLiveChannel: WARN: http error code = 404. [PERF] 498ms, url='https://api.claro.com.br/residential/v1/userusages/contents'”，播放501 dash时黑屏，且App访问license接口也返回404；无线裁剪音轨切换烤机（机顶盒2）在27日测试过程中同样出现黑屏一直在加载，日志显示有OOM导致IP-9。\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        760,
+        1140
+      ],
+      "id": "1f5e9761-1b8d-4ebe-88fd-151f59eef462",
+      "name": "AI Agent-总结comments"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        540,
+        1140
+      ],
+      "id": "7e462759-8cad-4cd4-ab36-283717c772a1",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\noutput_items = []\n\n# 清理 <think> ... </think> 内容\nthink_pattern = re.compile(r\"<think>.*?</think>\", re.DOTALL | re.IGNORECASE)\n\n# QA 匹配正则：question/indexes/answer 可出现也可缺失，顺序不固定，但按 question 首先匹配\nfield_pattern = re.compile(\n    r'(问题总结|问题现象|具体复现步骤)\\s*:\\s*[\"\\']?(.*?)[\"\\']?(?=\\s*(问题总结|问题现象|具体复现步骤)\\s*:|\\Z)',\n    re.IGNORECASE | re.DOTALL\n)\n\ndef safe_str(val):\n    if val is None:\n        return \"\"\n    try:\n        return str(val)\n    except Exception:\n        return \"\"\n\nfor item in _input.all():\n    raw_text = safe_str(item.json.get(\"output\", \"\"))\n    path = safe_str(item.json.get(\"path\", \"\"))\n  \n    q_val, a_val, idx_val = \"\", \"\", \"\"\n\n    if raw_text.strip():\n        # ① 清理 <think>\n        cleaned_text = think_pattern.sub(\"\", raw_text).strip()\n\n    # 输出\n    output_items.append({\n        \"json\": {\n            \"output\": cleaned_text,\n  \n        }\n    })\n\nreturn output_items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1140
+      ],
+      "id": "bac93724-2f2e-414b-8db3-153d14d019e2",
+      "name": "去掉think1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ab9ca194-3d44-49e6-8243-0798d4343418",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "f6be5440-7f4e-4c1e-9717-5ef6824ce735",
+              "name": "chunk",
+              "value": "={{ $('汇总commnets和token合并内容1').item.json.comments_str }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1340,
+        1265
+      ],
+      "id": "9f8c7ba4-b8ed-4424-b532-47db519cf9a6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "comments = items[0].get(\"json\", {}).get(\"comments_list\", [])\nmax_len = 512\n\nchunks = []\ncurrent_chunk = \"\"\n\nfor comment in comments:\n    if not comment:\n        continue\n\n    # 如果单条 comment 本身超过 512，则直接当成独立 chunk\n    if len(comment) > max_len:\n        if current_chunk:\n            chunks.append(current_chunk)\n            current_chunk = \"\"\n        chunks.append(comment)\n        continue\n\n    # 当前 chunk + 本条 comment 会不会超过 512\n    if len(current_chunk) + len(comment) > max_len:\n        # 结算当前 chunk\n        if current_chunk:\n            chunks.append(current_chunk)\n        current_chunk = comment  # 新开一段\n    else:\n        # 同一段继续添加\n        current_chunk += comment\n\n# 最后一段\nif current_chunk:\n    chunks.append(current_chunk)\n\n# 返回给 n8n\nreturn [{\"json\": {\"chunk\": c}} for c in chunks]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        480
+      ],
+      "id": "9e959b0a-d6e1-4c8d-859d-cb2131d9401c",
+      "name": "计算文字长度，分块（<512字符）",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "={{ $('fileName').item.json.target_dir }}{{ $('缩短名字').item.json.filename.replace(\".md\",\"_comments总结比较之后内容.csv\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        220
+      ],
+      "id": "f513c7f3-b368-4ed5-89f5-b4774d49b5bf",
+      "name": "test-比较总结后的内容"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{ $('fileName').item.json.target_dir }}{{ $('fileName').item.json.filename.replace(\".md\",\"_comments总结比较之后内容.csv\") }}",
+        "options": {
+          "append": false
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -340,
+        220
+      ],
+      "id": "e9e69e40-58bd-426c-873b-0ee629252659",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        830,
+        840
+      ],
+      "id": "27f98134-b87c-4018-895b-4985eb03bc2a",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\ncomments_conbine = ''\nfor item in _input.all():\n    json_item = item.get(\"json\", {})\n    comments = json_item.get(\"output\", \"\")\n    comments_conbine = \"\".join(comments)\nreturn {\"comment_conbine\": comments_conbine}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        840
+      ],
+      "id": "6b359e5f-d117-4177-8d69-5d7df062475c",
+      "name": "汇总comments"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.58.11.60:1234/tokenize",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.comment_conbine }}"
+            },
+            {
+              "name": "include_special_tokens",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        840
+      ],
+      "id": "86de98da-6485-45cb-ab6a-65c864241a74",
+      "name": "计算tokens"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bc61d67d-2a2e-4bfa-8329-ea25287a6483",
+              "leftValue": "={{ $json.token_count }}",
+              "rightValue": "={{ $('When Executed by Another Workflow').first().json.max_token  }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        840
+      ],
+      "id": "67d28e27-0fa4-4b9f-ac19-9df4adb56e72",
+      "name": "判断是否超过最大上下文",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4adfaded-2118-496d-b5c2-644fdf87fbea",
+              "name": "comment_list",
+              "value": "={{ $('Aggregate1').item.json.output }}",
+              "type": "array"
+            },
+            {
+              "id": "b9ca6e49-97aa-401c-9f5b-f0a1a2b94004",
+              "name": "max_token",
+              "value": "={{ $('When Executed by Another Workflow').first().json.max_token  }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1780,
+        940
+      ],
+      "id": "1964fd52-7825-4be9-8860-bd78e4ec62ca",
+      "name": "提取comments"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "comments_list",
+              "type": "array"
+            },
+            {
+              "name": "max_token"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -680,
+        1140
+      ],
+      "id": "5764b027-2732-4a74-b090-0c6a87ca11cc",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "dKW1o4U7WsP5fpQL",
+          "mode": "list",
+          "cachedResultName": "1211-分块总结"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "max_token": "={{ $json.max_token }}",
+            "comments_list": "={{ $json.comment_list }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "comments_list",
+              "displayName": "comments_list",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            },
+            {
+              "id": "max_token",
+              "displayName": "max_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        940
+      ],
+      "id": "6d8ad0b0-9127-4bc5-a1a4-42f55dd366e6",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:4b-instruct-2507-fp16",
+        "options": {
+          "temperature": 0.1,
+          "topP": 0.3,
+          "numCtx": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        840,
+        1360
+      ],
+      "id": "f4bc63cf-b4bd-46f1-b530-e9307998b2e9",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Hb7YviiEN6XNVnVZ",
+          "name": "http://10.58.11.60:11434"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "88dff993-1090-412f-aa62-0823e30cedbd",
+              "name": "comment_conbine",
+              "value": "={{ $node[\"汇总comments\"].json.comment_conbine }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1780,
+        740
+      ],
+      "id": "3126fe4d-a93b-4987-aab9-78aa23aef58f",
+      "name": "输出"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f3feb2dd-b335-49c9-9402-5f81368f3610",
+              "name": "comments",
+              "value": "={{ $('Split Out').item.json.comments_list  }}",
+              "type": "string"
+            },
+            {
+              "id": "53f4ad04-6834-47eb-8454-a0864d1becdd",
+              "name": "token_count",
+              "value": "={{ $json.token_count }}",
+              "type": "number"
+            },
+            {
+              "id": "73ced50c-9cb3-446f-9866-ea6930e9b860",
+              "name": "max_token",
+              "value": "={{ $('When Executed by Another Workflow').item.json.max_token  }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        100,
+        1140
+      ],
+      "id": "3496d50a-b4d8-4c5b-be6b-803507c80c9c",
+      "name": "汇总commnets和token"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://10.58.11.60:1234/tokenize",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.comments_list }}"
+            },
+            {
+              "name": "include_special_tokens",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -120,
+        1140
+      ],
+      "id": "3418a19a-d3e4-4f21-9aff-ceb6f23d6678",
+      "name": "计算tokens1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 假设 _input.all() 中已经包含了每条 text 的 token_count\nitems = _input.all()\n# user_token_count = _input.all()[0]['json']['user_token_count']\nmax_token = _input.all()[0]['json']['max_token']\nMAX_TOKENS = int(max_token)\n\n\nchunks = []\ncurrent_chunk = []\ncurrent_chunk_token_count = 0\nuser_jira = ''\nimport json\nfor item in items:\n    comments = item['json']['comments']\n    token_count = item['json']['token_count']\n    # user_jira = item['json']['user_jira']\n    # user_jira_json = json.loads(user_jira)\n    # user_sw = user_jira_json[\"software_version\"]\n    # user_hw = user_jira_json[\"hardware_version\"]\n    # kb_jira_json = json.loads(text)\n    # kb_sw = kb_jira_json[\"software_version\"]\n    # kb_hw = kb_jira_json[\"hardware_version\"]\n  \n    if current_chunk_token_count + token_count > MAX_TOKENS:\n        if current_chunk:\n            chunks.append({\n                \"json\": {\n                    \"comments_str\": \"\\n\".join(current_chunk),\n                    \"comments\": current_chunk,\n                    \"token_count\": current_chunk_token_count,\n                    # \"user_jira\": user_jira\n                }\n            })\n        current_chunk = [comments]\n        current_chunk_token_count = token_count\n    else:\n        # if kb_hw != user_hw or kb_sw != user_sw:\n        #     continue\n        current_chunk.append(comments)\n        current_chunk_token_count += token_count\n\nif current_chunk:\n    chunks.append({\n        \"json\": {\n            \"comments_str\": \"\\n\".join(current_chunk),\n            \"comments\": current_chunk,\n            \"token_count\": current_chunk_token_count,\n            # \"user_jira\": user_jira\n        }\n    })\n\nreturn chunks\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        1140
+      ],
+      "id": "33162abc-8e40-4c75-bd5e-10df13ffb0c8",
+      "name": "汇总commnets和token合并内容1"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "comments_list",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        1140
+      ],
+      "id": "671f8c73-e407-41e1-9c56-b59d53740af0",
+      "name": "Split Out"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent-总结comments": {
+      "main": [
+        [
+          {
+            "node": "去掉think1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent-总结comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去掉think1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "计算文字长度，分块（<512字符）": {
+      "main": [
+        []
+      ]
+    },
+    "test-比较总结后的内容": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "汇总comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "汇总comments": {
+      "main": [
+        [
+          {
+            "node": "计算tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "计算tokens": {
+      "main": [
+        [
+          {
+            "node": "判断是否超过最大上下文",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "判断是否超过最大上下文": {
+      "main": [
+        [
+          {
+            "node": "输出",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "提取comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取comments": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent-总结comments",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        []
+      ]
+    },
+    "计算tokens1": {
+      "main": [
+        [
+          {
+            "node": "汇总commnets和token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "汇总commnets和token": {
+      "main": [
+        [
+          {
+            "node": "汇总commnets和token合并内容1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "汇总commnets和token合并内容1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "计算tokens1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9108cfe2-9f16-49e7-bc45-0bb48beab4da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "dKW1o4U7WsP5fpQL",
+  "tags": []
+}

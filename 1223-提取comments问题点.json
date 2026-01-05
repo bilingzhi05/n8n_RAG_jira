@@ -1,0 +1,243 @@
+{
+  "name": "1223-提取comments问题点",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "qwen3:4b-instruct-2507-fp16",
+        "options": {
+          "temperature": 0.1,
+          "topP": 0.1,
+          "numCtx": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        620,
+        480
+      ],
+      "id": "aaf36038-aa5f-421d-bac4-87786aa8b5c5",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Hb7YviiEN6XNVnVZ",
+          "name": "http://10.58.11.60:11434"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "input"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "输入的内容",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -60,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=请分析以下内容，提取可能的问题原因，以列表形式返回：\n{{ $json.input }}",
+        "options": {
+          "systemMessage": "### 角色设定\n你是一名资深 Android / 多媒体系统问题分析专家，擅长从 JIRA 的  \n`issue_description` 和 `comments` 中抽取**真正导致问题发生的根因（problem causes）**，用于问题相似度匹配与归类。\n\n---\n\n### 任务目标\n根据输入的 JIRA 内容，分析**是什么原因导致问题**，输出可直接用于相似度计算的问题点列表。\n\n---\n\n### 严格分析规则\n1. 每条只保留 **直接导致问题的根因**\n2. 回答“问题是因为什么原因而发生的”，\n3. 若存在多个独立问题原因，必须拆分为多条  \n4. **禁止输出**：\n   - 复现步骤或操作场景  \n   - 函数调用链、库名、崩溃地址、信号类型  \n   - 已知问题或修复方法  \n   - 编号、解释文字或多余字段  \n5. 输出内容必须是**完整的一句话**，可独立用于相似度匹配  \n6. 一条根因一句话，不允许把多层因果合并\n7. 每一条必须是完整的陈述句\n  - 必须包含：原因主体 + 触发/缺陷行为 + 导致结果\n  - 必须能单独回答：“这个问题为什么会发生？”\n  - 禁止输出名词、短语或关键词堆砌\n  - 错误示例：“内存越界”“DDR位翻转”“buffer manager 初始化失败”\n  - 正确示例：“由于 buffer manager 初始化失败，内核在后续访问中触发空指针解引用并导致 kernel panic”\n8. 简洁明了，一句话就能说明白\n9. 输出必须严格遵守 JSON 格式：\n\n{\n  \"problem_causes\": [\n    \"问题原因 1\",\n    \"问题原因 2\"\n  ]\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        600,
+        220
+      ],
+      "id": "9efd8a83-2b5c-4c2f-a421-a778fed71dab",
+      "name": "提取问题点"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor item in _input.all():\n  item.json.input = \"\"\"\n  {\n  \"jira_id\": \"OTT-88104\",\n  \"issue_description\": \"STB在暂停状态下快进后进入缓冲状态且无法自动恢复\",\n  \"reproduction_steps\": [\n    \"Step1：在某网络环境下启动某设备并播放某片源的回看内容\",\n    \"Step2：在播放过程中按下暂停按钮\",\n    \"Step3：在暂停状态下执行快进操作，观察设备状态变化\"\n  ],\n  \"software_version\": \"Android U-14\",\n  \"hardware_version\": \"AH21EW-S905X4\",\n  \"chip\": \"\",\n  \"components\": \"IPTV-Player\",\n  \"key_error_logs\": \"\",\n  \"comments\": [\n    {\n      \"level\": \"复现方式与现象\",\n      \"description\": \"用户在播放内容后暂停再进行seek操作时，播放器持续停留在缓冲状态且无法自动恢复，日志显示APK调用seek后未向底层发送有效数据\"\n    },\n    {\n      \"level\": \"定位结果\",\n      \"description\": \"sync模块及media codec层未正确恢复输入buffer，导致输入buffer已返还给APK但未触发后续数据拉取，播放器误判为缓冲中\"\n    },\n    {\n      \"level\": \"解决方案\",\n      \"description\": \"需确认APK在seek后是否正确调用play请求，当前判断为APK逻辑缺陷，由APK团队负责修复相关逻辑\"\n    }\n  ],\n  \"root_cause\": \"app issue\",\n  \"how_to_fix\": \"app issue\",\n  \"patch_list\": [],\n  \"doc_link\": [],\n  \"source\": \"\"\n}\n  \"\"\"\nreturn _input.all()"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        180
+      ],
+      "id": "ab296d7a-6af9-407a-b6c5-98a02fcc48c0",
+      "name": "Code",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\n# n8n 输入\nitem = items[0][\"json\"]\n\nfinal_output = []\n\n# for entry in item:\nmerged = {}\n\n# 1. 解析 input（JIRA 原始信息）\nif item.get(\"input\"):\n    input_str = item[\"input\"][0]\n    try:\n        input_data = json.loads(input_str)\n        merged.update(input_data)\n    except Exception:\n        merged[\"raw_input\"] = input_str\n\n# 2. 解析 output（problem_causes）\nif item.get(\"output\"):\n    output_str = item[\"output\"][0]\n    try:\n        output_data = json.loads(output_str)\n        merged[\"problem_causes\"] = output_data.get(\"problem_causes\", [])\n    except Exception:\n        merged[\"problem_causes_raw\"] = output_str\n\nfinal_output.append(merged)\nfinal_result_str = json.dumps(merged, ensure_ascii=False, indent=2)\nreturn {\n    \"final_result\": final_output,\n    \"final_result_str\": final_result_str\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        340
+      ],
+      "id": "72f6fbe1-0bf4-42df-a67c-4aff2ef23efc",
+      "name": "合并"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        940,
+        340
+      ],
+      "id": "5215bf0c-f8d4-4680-9f85-acaf45d1c0fa",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output"
+            },
+            {
+              "fieldToAggregate": "input"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": false
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1160,
+        340
+      ],
+      "id": "4c699841-8496-4472-8280-fcc58942641a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "id": "3a158c85-a8aa-42a9-9445-94911602cf43",
+      "name": "When clicking ‘Execute workflow’",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "提取问题点",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "输入的内容": {
+      "main": [
+        [
+          {
+            "node": "提取问题点",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "提取问题点",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "提取问题点": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "合并",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "97230fac-70e3-422b-b43b-e2c6211ed028",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "c1Deh2y1KVPaZ9c3",
+  "tags": []
+}

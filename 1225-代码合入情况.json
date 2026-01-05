@@ -1,0 +1,1017 @@
+{
+  "name": "1225-代码合入情况",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        -40
+      ],
+      "id": "092f6d9c-c02e-4eb4-8101-45cbc862a9f6",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2c3aaed-cdc4-4014-aeef-09723edc74cf",
+              "name": "body",
+              "value": "={{ $json.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        800,
+        -40
+      ],
+      "id": "6dc60880-b1cf-4072-8799-9c4064e7f77a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body",
+              "renameField": true,
+              "outputFieldName": "comments"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -40
+      ],
+      "id": "2ccf140b-81a2-48d6-9cfd-60d2618bc57d",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\n# n8n 输入\nitem = items[0][\"json\"]\ncomments = item.get(\"comments\", [])\n\nresult = []\n\n# http / https URL 正则\nurl_pattern = re.compile(r'https?://[^\\s\\]\\)]+')\n# 提取 URL 末尾数字（change id）\nchange_id_pattern = re.compile(r'/(\\d+)$')\n\nfor comment in comments:\n    if not isinstance(comment, str):\n        continue\n\n    # 只处理包含 Change proposed 的 comment\n    if \"Change proposed\" not in comment:\n        continue\n\n    urls = url_pattern.findall(comment)\n\n    for url in urls:\n        match = change_id_pattern.search(url)\n        if not match:\n            continue\n\n        result.append({\n            \"url\": url,\n            \"change_id\": match.group(1)\n        })\n\nreturn [\n    {\n        \"json\": {\n            \"change_proposed_change_ids\": result\n        }\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        -40
+      ],
+      "id": "c6a924e7-e898-457b-af85-a99884b8b152",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://scgit.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "50dae563-1f31-4e11-9129-e3c8e565a778"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "scgit"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d7f6dde7-2074-4f4f-a619-4bccefbb67f5",
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://source.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "source"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "130bdf6a-baa7-48b8-b502-35b41571bbba",
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://aml-code-master.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "aml-code-master"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1700,
+        -40
+      ],
+      "id": "f247ac20-3176-42b7-ba1f-352e684508ef",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "change_proposed_change_ids",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        -40
+      ],
+      "id": "dc612cfd-efea-4fbd-9923-9d108f8a8077",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59edfd73-4382-4622-88e6-5a4c7269dbe4",
+              "name": "change_id",
+              "value": "={{ $json.change_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5af19c68-3388-4d17-bbab-b92b1b336265",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "fceceffc-9886-464e-8457-a3fca7c5740f",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2180,
+        -200
+      ],
+      "id": "6c6176ca-9f03-498c-aa26-bac74800c361",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "resource": "issueComment",
+        "operation": "getAll",
+        "issueKey": "OTT-77639",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        540,
+        -40
+      ],
+      "id": "06390957-fa81-4398-865a-65d3eb63e76d",
+      "name": "similar_jira",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "get",
+        "issueKey": "OTT-90127",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        80,
+        200
+      ],
+      "id": "86e53fc0-f945-46ef-8f37-d989161594bd",
+      "name": "Get an issue",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "fYaklPx4lBzCsXM6",
+          "name": "Jira SW Server-WCS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b63c6cd2-d12a-4e82-a6a5-4b5c131e501b",
+              "name": "project_id",
+              "value": "={{ $json.fields.customfield_10407[0].value }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        200
+      ],
+      "id": "83c55dd8-083f-4f87-880d-cc1b8dde6cda",
+      "name": "提取软件版本"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/amlogic/RAG/jira_set/A_REPO_PATH/repo_route.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        80,
+        440
+      ],
+      "id": "7d3037c4-4dbf-4adb-ba20-65465364594a",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        460,
+        420
+      ],
+      "id": "85b82778-d9f3-4445-8b23-6808147e15c3",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        700,
+        220
+      ],
+      "id": "4de2dbcf-90c5-4f97-8f80-81f902470f1e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# n8n 输入\nproject_item = items[0][\"json\"]\ndata_item = items[1][\"json\"]\n\nproject_id = project_item.get(\"project_id\")\ndata_list = data_item.get(\"data\", [])\n\nrepo_path = None\n\nfor row in data_list:\n    if row.get(\"Project ID\") == project_id:\n        repo_path = row.get(\"repo_path\")\n        break\n\nreturn [\n    {\n        \"json\": {\n            \"project_id\": project_id,\n            \"exists\": repo_path is not None,\n            \"repo_path\": repo_path\n        }\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        220
+      ],
+      "id": "219fc11d-36ce-49a8-962c-3591252787cf",
+      "name": "检查project_id 是否存在,提取仓库路径"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.repo_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        220
+      ],
+      "id": "4597474f-1fc0-49eb-a17f-8c17ec396829",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        220
+      ],
+      "id": "e05e643a-f3c2-4d1b-8119-ed584d268f21",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/source_get_change_info/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2720,
+        80
+      ],
+      "id": "1d2fef1b-95e7-4848-ae13-63ce7772a032",
+      "name": "source_get_change_info",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/aml_code_master_get_change_info/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2740,
+        -120
+      ],
+      "id": "7f2ef4e3-4c37-495a-9248-82fc1894d00a",
+      "name": "aml_code_master_get_change_info",
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59edfd73-4382-4622-88e6-5a4c7269dbe4",
+              "name": "change_id",
+              "value": "={{ $json.change_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5af19c68-3388-4d17-bbab-b92b1b336265",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "fceceffc-9886-464e-8457-a3fca7c5740f",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2160,
+        -20
+      ],
+      "id": "d7672995-02ba-4a44-8ee1-a2fd3c9c8bfe",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59edfd73-4382-4622-88e6-5a4c7269dbe4",
+              "name": "change_id",
+              "value": "={{ $json.change_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5af19c68-3388-4d17-bbab-b92b1b336265",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "fceceffc-9886-464e-8457-a3fca7c5740f",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2200,
+        140
+      ],
+      "id": "e3166954-2595-4988-a1d5-07b4028f88d8",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/source_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        -20
+      ],
+      "id": "22c2bac4-49d7-4c45-b83d-ec45e3295721",
+      "name": "source_get_change_detail"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/aml_code_master_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        140
+      ],
+      "id": "6e40f708-96de-4d31-a8fb-1c5e3e1c217b",
+      "name": "aml_code_master_get_change_detail"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/scgit_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1960,
+        -200
+      ],
+      "id": "400968d5-7a64-4a8d-97f7-27b422a40491",
+      "name": "scgit_get_change_detail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4486e8a-2a48-4508-9bac-8648b5729122",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "MERGED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3000,
+        60
+      ],
+      "id": "b8b94a49-d3f2-49ee-8587-8c0dc3494a72",
+      "name": "是否merge了"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4486e8a-2a48-4508-9bac-8648b5729122",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "MERGED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2960,
+        -120
+      ],
+      "id": "90dbe5f4-f660-438c-8290-de47a5faaf27",
+      "name": "是否merge了1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "02f1517d-c360-472a-b099-1e77fb24cd83",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            },
+            {
+              "id": "ed881951-6fd7-4fa3-9b59-4875eab7cc85",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "7f10373b-5052-4300-bacc-b7b27eb40c32",
+              "name": "patch_url",
+              "value": "={{ $('Split Out').item.json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3440,
+        0
+      ],
+      "id": "0e1084b5-daea-4728-bd08-dc42a293eee9",
+      "name": "提取project和branch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3580,
+        340
+      ],
+      "id": "bec2da87-f8b8-41d7-a5aa-497882e3d658",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\nitem = items[0][\"json\"]\n\nresults = []\ndata_xml = item.get(\"data\", \"\")\n\n# 提取 manifest 中所有 project 节点\nprojects = re.findall(\n    r'<project[^>]+name=\"([^\"]+)\"[^>]+revision=\"([^\"]+)\"',\n    data_xml\n)\n\n# 转成集合方便查找\nproject_branch_set = set(\n    (name.strip(), revision.strip())\n    for name, revision in projects\n)\n\nfor entry in items[0][\"json\"].get(\"input\", []):\n    project_full = entry.get(\"project\", \"\")\n    branch = entry.get(\"branch\", \"\")\n\n    # 只保留最后两个目录\n    parts = project_full.split(\"/\")\n    short_project = \"/\".join(parts[-2:]) if len(parts) >= 2 else project_full\n\n    exists = (short_project, branch) in project_branch_set\n\n    results.append({\n        \"original_project\": project_full,\n        \"short_project\": short_project,\n        \"branch\": branch,\n        \"exists_in_data\": exists,\n        \"patch_url\": entry.get(\"patch_url\")\n    })\n\nreturn results\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3900,
+        120
+      ],
+      "id": "01e4cc7d-e127-4c81-a880-966300f7e48f",
+      "name": "检查branch和project是否存在"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18d62f69-685a-47bc-bab5-ec660b9dc1e0",
+              "name": "patch_url",
+              "value": "={{ $('Switch').item.json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3320,
+        -120
+      ],
+      "id": "6b7c9c83-4b61-44f8-8508-000af2c2dbf2",
+      "name": "Edit Fields4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "similar_jira",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get an issue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "scgit_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "source_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "aml_code_master_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "similar_jira": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an issue": {
+      "main": [
+        [
+          {
+            "node": "提取软件版本",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取软件版本": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "检查project_id 是否存在,提取仓库路径",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "检查project_id 是否存在,提取仓库路径": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "aml_code_master_get_change_info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "source_get_change_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "aml_code_master_get_change_info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "source_get_change_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "aml_code_master_get_change_info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "source_get_change_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "source_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aml_code_master_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scgit_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "source_get_change_info": {
+      "main": [
+        [
+          {
+            "node": "是否merge了",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aml_code_master_get_change_info": {
+      "main": [
+        [
+          {
+            "node": "是否merge了1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否merge了": {
+      "main": [
+        [
+          {
+            "node": "提取project和branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取project和branch": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "检查branch和project是否存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否merge了1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "11590cd0-b08a-45f4-a7b7-f39f32dea973",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "f1PVwzb3HuSSj5Ai",
+  "tags": []
+}
