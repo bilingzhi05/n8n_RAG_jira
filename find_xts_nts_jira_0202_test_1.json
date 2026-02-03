@@ -1,0 +1,2052 @@
+{
+  "name": "find_xts_nts_jira_0202_test_1",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -380,
+        855
+      ],
+      "id": "bca54c01-f911-4565-936a-374102a50c2d",
+      "name": "When clicking ‘Execute workflow’",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "jql": "=key = {{ $json.key }}"
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        60,
+        955
+      ],
+      "id": "fabb0d69-1fe2-4ff3-aa04-41feae5dde41",
+      "name": "查询jira,提取信息",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "resource": "issueComment",
+        "operation": "getAll",
+        "issueKey": "={{ $('查询jira').item.json.key }}",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        280,
+        955
+      ],
+      "id": "9a50a1d8-c6fb-4186-b5ea-cca714746a5e",
+      "name": "Get many comments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "83fab9b8-b0ab-43ec-a044-6cca1076668f",
+              "name": "key",
+              "value": "={{ $json.body.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        955
+      ],
+      "id": "97333bd6-0f26-4aaa-a0aa-a7bcde87e830",
+      "name": "查询jira"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body",
+              "renameField": true,
+              "outputFieldName": "comments"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        500,
+        955
+      ],
+      "id": "3d394f6c-eb22-4e3a-a8d1-27f326e655d9",
+      "name": "合并comments"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72d3f7b9-3892-4779-a910-3a1cc1c562b7",
+              "name": "summary",
+              "value": "={{ $('查询jira,提取信息').item.json.fields.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "168ae0ad-51a1-404c-8103-e82f6b59715c",
+              "name": "description",
+              "value": "={{ $('查询jira,提取信息').item.json.fields.description }}",
+              "type": "string"
+            },
+            {
+              "id": "8efdb3a8-bb97-48b3-a210-bd04c0153c7e",
+              "name": "sw_version",
+              "value": "={{ $('查询jira,提取信息').item.json.fields.customfield_10300[0].value }}",
+              "type": "string"
+            },
+            {
+              "id": "71e9176b-34ec-4925-b57d-586c15506e18",
+              "name": "comments",
+              "value": "={{ $json.comments }}",
+              "type": "array"
+            },
+            {
+              "id": "fdf2f8a0-0c00-4b09-a6bc-15366560166c",
+              "name": "jira_key",
+              "value": "={{ $('查询jira').item.json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        955
+      ],
+      "id": "d6313143-6a21-468a-b5e8-c1943f106c1f",
+      "name": "提取查询jira内容"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\nitem = items[0][\"json\"]\n\ndesc = item.get(\"description\", \"\") or \"\"\nsummary = item.get(\"summary\", \"\") or \"\"\ncomments = item.get(\"comments\", []) or []\njira_key = item.get(\"jira_key\", \"\") or \"\"\n\n# --------------- helper ---------------\ndef uniq(seq):\n    seen = set()\n    out = []\n    for x in seq:\n        if x not in seen:\n            seen.add(x)\n            out.append(x)\n    return out\n\n# --------------- 1️⃣ xts_type ---------------\nxts_type_candidates = []\n\nfor text in [summary, desc]:\n    m = re.search(r\"(GTS|CTS|VTS|STS|NTS)\", text, re.I)\n    if m:\n        xts_type_candidates.append(m.group(1).upper())\n\nfor c in comments:\n    m = re.search(r\"(GTS|CTS|VTS|STS|NTS)\", c, re.I)\n    if m:\n        xts_type_candidates.append(m.group(1).upper())\n\nxts_type_candidates = uniq(xts_type_candidates)\nxts_type = xts_type_candidates[0] if xts_type_candidates else None\n\n\n# --------------- 2️⃣ test_module（单独列表） ---------------\nmodule_pattern = re.compile(\n    r\"(Gts\\w*Cases|Cts\\w*Cases|Vts\\w*Cases|Tvts\\w*Cases)\",\n    re.I\n)\n\nmodule_candidates = []\n\n# summary / desc\nfor text in [summary, desc]:\n    module_candidates.extend(module_pattern.findall(text))\n\n# comments\nfor c in comments:\n    module_candidates.extend(module_pattern.findall(c))\n\nmodule_pattern = re.compile(\n    r\"(Gts\\w*\\b|Cts\\w*\\b|Vts\\w*\\b|Tvts\\w*\\b)\",\n)\n\n# summary / desc\nfor text in [summary, desc]:\n    module_candidates.extend(module_pattern.findall(text))\n\n# comments\nfor c in comments:\n    module_candidates.extend(module_pattern.findall(c))\n\n# 去重但保持顺序\ntest_module_list = uniq(module_candidates)\n\n\n# --------------- 3️⃣ failed_tests ---------------\nfailed_tests = []\n\ntable_pattern = re.compile(\n    r\"(com\\.[^\\s#]+|android\\.[^\\s#]+)#(test[^\\s\\\",|]+)\"\n)\n\n# desc\nfor text in [summary, desc]:\n  for m in table_pattern.finditer(text):\n      failed_tests.append((m.group(1).strip(), m.group(2).strip()))\n\n# comments\nfor c in comments:\n    for m in table_pattern.finditer(c):\n        failed_tests.append((m.group(1).strip(), m.group(2).strip()))\n\n# if not failed_tests:\n#     table_pattern = re.compile(\n#         r\"(\\btest[^\\s\\\"|]+\\b)\"\n#     )\n    \n#     # desc\n#     for text in [summary, desc]:\n#       for m in table_pattern.finditer(text):\n#           failed_tests.append((None, m.group(1).strip()))\n    \n#     # comments\n#     for c in comments:\n#         for m in table_pattern.finditer(c):\n#             failed_tests.append((None, m.group(1).strip()))\n\n# 去重\nfailed_tests_unique = []\nseen = set()\nfor tc, ti in failed_tests:\n    key = f\"{tc}#{ti}\"\n    if key not in seen:\n        seen.add(key)\n        failed_tests_unique.append({\n            \"test_case\": tc,\n            \"test_item\": ti\n        })\n\n\n# --------------- 输出 ---------------\nreturn [{\n    \"json\": {\n        \"xts_type\": xts_type,\n        \"test_module\": test_module_list,\n        \"failed_count\": len(failed_tests_unique),\n        \"failed_tests\": failed_tests_unique,\n        \"current_jira_key\": jira_key\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        955
+      ],
+      "id": "ad4485d0-a3de-47a2-8642-b488e61bed46",
+      "name": "提取xts的模块、case、用例"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4820,
+        440
+      ],
+      "id": "5bd2979c-829b-446c-ac74-a03679b3e956",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "failed_tests",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4600,
+        700
+      ],
+      "id": "7f7ef666-7014-4112-a8a3-2738721506f8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "getAll",
+        "limit": 10,
+        "options": {
+          "jql": "=text ~ \"\\\"{{ $json.test_item }}\\\"\" and \"Software Release\" = \"{{ $('查询jira,提取信息').first().json.fields.customfield_10300[0].value }}\" AND key != {{ $('查询jira').first().json.key }}  ORDER BY created DESC "
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        5040,
+        460
+      ],
+      "id": "d7317878-9300-479c-abe1-61fca0ad8148",
+      "name": "找到测试用例以前的记录",
+      "alwaysOutputData": true,
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75a06464-b70f-4f8e-99b1-0ceaa9643edc",
+              "name": "jira_key",
+              "value": "={{ $json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "75051220-9086-4aec-8137-7d33d147e3b1",
+              "name": "jira_source",
+              "value": "test_item",
+              "type": "string"
+            },
+            {
+              "id": "cde2b33c-fb8b-482e-914d-6b2946dd136b",
+              "name": "created_time",
+              "value": "={{ $('找到测试用例以前的记录').item.json.fields.created }}",
+              "type": "string"
+            },
+            {
+              "id": "043d16bd-e3ec-45da-8cf0-2239855a3d1d",
+              "name": "test_item",
+              "value": "={{ $('Split Out').item.json.test_item }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5480,
+        480
+      ],
+      "id": "1fd085a9-909f-4b44-927e-35e14a0227bd",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5040,
+        255
+      ],
+      "id": "e3dee131-0cb2-4022-a25b-52275930081f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        5160,
+        960
+      ],
+      "id": "00b8bdd3-aefd-4ad0-980a-4335d484caa7",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "getAll",
+        "limit": 10,
+        "options": {
+          "jql": "=text ~ \"\\\"{{ $json.test_case }}\\\"\" and \"Software Release\" = \"{{ $('查询jira,提取信息').first().json.fields.customfield_10300[0].value }}\" AND key != {{ $('查询jira').first().json.key }} ORDER BY created DESC "
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        5380,
+        980
+      ],
+      "id": "92cc2506-e26f-4627-85ea-eb4ec84e045e",
+      "name": "找到测试用例以前的记录1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from datetime import datetime\n\n# n8n 输入\ndata = items[0][\"json\"][\"data\"]\ncur_jira_key = items[0][\"json\"][\"key\"]\n\n# jira_source 优先级\nSOURCE_ORDER = {\n    \"test_item\": 0,\n    \"test_case\": 1,\n    \"test_module\": 2,\n}\n\ndef parse_time(t):\n    \"\"\"\n    解析时间格式：\n    2026-01-20T19:16:39.000+0800\n    \"\"\"\n    return datetime.strptime(t, \"%Y-%m-%dT%H:%M:%S.%f%z\")\n\n# ---------------- 1️⃣ 按 jira_key 去重（保留最新） ----------------\nlatest_by_key = {}\ncount = 0\nfor item in data:\n    key = item.get(\"jira_key\")\n    if not key:\n      continue\n    t = parse_time(item.get(\"created_time\"))\n\n    if key and key != cur_jira_key:\n      if key not in latest_by_key and key:\n          latest_by_key[key] = item\n      else:\n          old_time = parse_time(latest_by_key[key][\"created_time\"])\n          if t > old_time:\n              latest_by_key[key] = item\n\ndeduped_data = list(latest_by_key.values())\n\n# ---------------- 2️⃣ 排序 ----------------\ndata_sorted = sorted(\n    deduped_data,\n    key=lambda x: (\n        SOURCE_ORDER.get(x.get(\"jira_source\"), 99),\n        -parse_time(x.get(\"created_time\")).timestamp()\n    )\n)\n\ncount = len(data_sorted)\nif count == 0:\n  return [{\n    \"json\": {\n        \"data\": \"没有找到相似的jira\",\n        \"count\": count\n    }\n  }]\nreturn [{\n    \"json\": {\n        \"data\": data_sorted[:5],\n        \"count\": count\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6260,
+        240
+      ],
+      "id": "6a1d7ff4-65c5-48d1-901e-53e756415d90",
+      "name": "找的jira去重1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5420,
+        820
+      ],
+      "id": "8892c569-bca4-4404-b6fa-b680eb94625c",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2880,
+        40
+      ],
+      "id": "1b6f0773-67e8-4fc6-b76c-4bf8a1bf08e9",
+      "name": "Loop Over Items2"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "getAll",
+        "options": {
+          "jql": "=text ~ {{ $json.test_module }} ORDER BY created DESC "
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        3100,
+        60
+      ],
+      "id": "036d2518-29d7-4df0-8f50-e07ad94ccdcd",
+      "name": "找到测试用例以前的记录2",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5e5e8f15-b278-4fcb-a428-61047358d7af",
+              "leftValue": "={{ $json.fields.customfield_10300[0].value }}",
+              "rightValue": "={{ $('提取查询jira内容').item.json.sw_version }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3320,
+        60
+      ],
+      "id": "21bf3fe9-7a5c-4162-a26e-532cf6a12335",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3100,
+        -140
+      ],
+      "id": "d7c2b650-aa4c-4ee3-ba14-780add91df4a",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        5600,
+        240
+      ],
+      "id": "c5a2f847-be1f-4738-a255-63cfb4ef0d9e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "data"
+            },
+            {
+              "fieldToAggregate": "key"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5820,
+        240
+      ],
+      "id": "c83cbc6c-9df4-4559-a70f-10ba48cd078f",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75a06464-b70f-4f8e-99b1-0ceaa9643edc",
+              "name": "jira_key",
+              "value": "={{ $json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "75051220-9086-4aec-8137-7d33d147e3b1",
+              "name": "jira_source",
+              "value": "test_case",
+              "type": "string"
+            },
+            {
+              "id": "cde2b33c-fb8b-482e-914d-6b2946dd136b",
+              "name": "created_time",
+              "value": "={{ $('找到测试用例以前的记录1').item.json.fields.created }}",
+              "type": "string"
+            },
+            {
+              "id": "a8a743cc-f242-4f14-8cd0-764078f1d886",
+              "name": "test_case",
+              "value": "={{ $('对test_case去重').item.json.test_case }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5980,
+        980
+      ],
+      "id": "06c7c9c2-3188-4b48-9053-eb97afe60c55",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75a06464-b70f-4f8e-99b1-0ceaa9643edc",
+              "name": "jira_key",
+              "value": "={{ $json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "75051220-9086-4aec-8137-7d33d147e3b1",
+              "name": "jira_source",
+              "value": "test_module",
+              "type": "string"
+            },
+            {
+              "id": "cde2b33c-fb8b-482e-914d-6b2946dd136b",
+              "name": "created_time",
+              "value": "={{ $('找到测试用例以前的记录2').item.json.fields.created }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3540,
+        80
+      ],
+      "id": "1f64c2b8-2f92-4ef9-a884-ef6586cb1607",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "301232ed-c388-4684-91cc-76fed0ed51ca",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        1060
+      ],
+      "id": "7141a8af-daac-44f8-8a5c-a1c025bb9083",
+      "name": "Webhook1",
+      "webhookId": "301232ed-c388-4684-91cc-76fed0ed51ca"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "36955780-dae3-4502-bd9f-37d9d676db3a",
+              "leftValue": "={{ $json.failed_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4380,
+        800
+      ],
+      "id": "0b1fd603-0932-4507-b0de-1bcb2db1df2f",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "test_module",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        40
+      ],
+      "id": "633b5ddf-4a10-48a9-a734-6142f7d65704",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "504694e1-f3c7-4a3c-bd13-46f4eed25727",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2220,
+        160
+      ],
+      "id": "9aa7456e-bbd3-446d-9327-173b4246a7d1",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from datetime import datetime\n\n# n8n 输入\ndata = items[0][\"json\"][\"data\"]\ncur_jira_key = items[0][\"json\"][\"key\"]\n\n# jira_source 优先级\nSOURCE_ORDER = {\n    \"test_item\": 0,\n    \"test_case\": 1,\n    \"test_module\": 2,\n}\n\ndef parse_time(t):\n    \"\"\"\n    解析时间格式：\n    2026-01-20T19:16:39.000+0800\n    \"\"\"\n    return datetime.strptime(t, \"%Y-%m-%dT%H:%M:%S.%f%z\")\n\n# ---------------- 1️⃣ 按 jira_key 去重（保留最新） ----------------\nlatest_by_key = {}\n\nfor item in data:\n    key = item.get(\"jira_key\")\n    t = parse_time(item.get(\"created_time\"))\n\n    if key != cur_jira_key:\n      if key not in latest_by_key and key:\n          latest_by_key[key] = item\n      else:\n          old_time = parse_time(latest_by_key[key][\"created_time\"])\n          if t > old_time:\n              latest_by_key[key] = item\n\ndeduped_data = list(latest_by_key.values())\n\n# ---------------- 2️⃣ 排序 ----------------\ndata_sorted = sorted(\n    deduped_data,\n    key=lambda x: (\n        SOURCE_ORDER.get(x.get(\"jira_source\"), 99),\n        -parse_time(x.get(\"created_time\")).timestamp()\n    )\n)\n\ncount = len(data_sorted)\nif count == 0:\n  return [{\n    \"json\": {\n        \"data\": \"没有找到相似的jira\",\n        \"count\": count\n    }\n  }]\nreturn [{\n    \"json\": {\n        \"data\": data_sorted[:5],\n        \"count\": count\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3540,
+        -140
+      ],
+      "id": "863d4fb4-1f41-49f2-bdc8-b9a22d0628cd",
+      "name": "找的jira去重"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e56b5705-fe6a-4e4f-bca2-48bb32aa99e8",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            },
+            {
+              "id": "2aef5f3f-8edc-4d55-901a-17b08a70506f",
+              "name": "key",
+              "value": "={{ $('提取test_module').item.json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3320,
+        -140
+      ],
+      "id": "8e7422e8-b6b0-4142-9ee4-5900835003bc",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3a05e79e-3b99-4313-96af-c22dab5f319d",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            },
+            {
+              "id": "8adae005-7f23-4137-8cd3-bb625248174d",
+              "name": "key",
+              "value": "={{ $('查询jira').first().json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        6040,
+        240
+      ],
+      "id": "777011b2-aa33-45fe-bcb8-61aca019156d",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9edca27e-2f57-4a1f-a965-fde0867acd62",
+              "name": "test_module",
+              "value": "={{ $('提取xts的模块、case、用例').item.json.test_module }}",
+              "type": "array"
+            },
+            {
+              "id": "ef7371f1-7a42-400f-8127-c6828a534675",
+              "name": "key",
+              "value": "={{ $('查询jira').item.json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2440,
+        40
+      ],
+      "id": "07678511-9d01-4bff-92d6-29dfb663d8cb",
+      "name": "提取test_module"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ec91970-7026-4690-a0ef-4b104b27446f",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2440,
+        240
+      ],
+      "id": "48e80078-5034-4c19-95c9-162cb4a24f2a",
+      "name": "final_output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ec91970-7026-4690-a0ef-4b104b27446f",
+              "name": "data",
+              "value": "=没有提取到任何测试项，请检查后重试，暂不支持提取图片内容",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4600,
+        900
+      ],
+      "id": "40519b8f-340e-497f-ad84-3705841db4de",
+      "name": "final_output1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bfeb3dbb-2f06-4cb4-adc9-285d44ac478e",
+              "leftValue": "={{ $json.xts_type }}",
+              "rightValue": "VTS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "21d1fc84-2972-470e-bdfa-61a91cd20a0a",
+              "leftValue": "={{ $json.xts_type }}",
+              "rightValue": "NTS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        1000
+      ],
+      "id": "02974fbb-b640-4156-8a60-b10db5e71510",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=分析用户提供的内容，提取出所有的XTS测试项，按照格式提取 \n\n如果有#，需要将#前后的内容都作为一个整体的测试项。 \n如果没有#，直接提取test即可。\n禁止自己根据语义意思拼凑、捏造内容。 \n输出dict格式： { \"test_fail\"：[xxx,yyy]}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        760
+      ],
+      "id": "f319282b-adf4-4bea-b983-ad79dcbd19c6",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b-q8_0",
+        "options": {
+          "temperature": 0.3,
+          "topP": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        3660,
+        950
+      ],
+      "id": "c8344615-41fc-4caa-96e2-57537daed9c9",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Hb7YviiEN6XNVnVZ",
+          "name": "http://10.58.11.60:11434"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\nresult = []\n\n# 删除以下类型内容：\n# !image-xxx.png!\n# !screenshot-xxx.png!\n# !screenshot-xxx.png|thumbnail!\n# [~username]  (username 任意)\npattern = re.compile(\n    r'!(?:image|screenshot)-[\\w\\-]+\\.png(?:\\|thumbnail)?!|\\[~[^\\]]+\\]'\n)\n\nexclude_keywords = [\"详细信息请参见链接\",\"Change merged\", \"Change proposed\"]\n\nfor item in items:\n    comments = item.get(\"json\", {}).get(\"comments\", [])\n\n    for comment in comments:\n        # 跳过包含排除关键词的评论\n        if any(keyword in comment for keyword in exclude_keywords):\n            continue\n\n        # 删除匹配内容，并合并多余空格\n        cleaned = re.sub(pattern, '', comment)\n        cleaned = re.sub(r'\\s+', ' ', cleaned).strip()\n\n        if cleaned:\n            result.append(cleaned)\n\nreturn [{\n    \"json\": {\n        \"comments\": result\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        755
+      ],
+      "id": "93d20277-6e5d-460f-bb09-d71c44370fa3",
+      "name": "清理无关的内容Code"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from difflib import SequenceMatcher\n\nSIMILARITY_THRESHOLD = 0.85\n\ndef is_similar(a, b):\n    return SequenceMatcher(None, a, b).ratio() >= SIMILARITY_THRESHOLD\n\n\nitems = _input.all()\nresult = \"\"\nfor item in items:\n    comments = item.json.get(\"comments\", [])\n    deduped = []\n\n    for c in comments:\n        is_dup = False\n        for d in deduped:\n            if is_similar(c, d):\n                is_dup = True\n                break\n\n        if not is_dup:\n            deduped.append(c)\n\n    item.json[\"comments\"] = deduped\nresult = \"\\n\".join(item.json[\"comments\"])\n\nreturn {\"comments_list\": item.json[\"comments\"],\n       \"comment_conbine\": result}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2260,
+        755
+      ],
+      "id": "87ecfab2-9184-4e58-9c36-fa84074e0562",
+      "name": "去掉相似重复的comments"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\nimport json\n\nMAX_COMMENT_LEN = 2000\nBASE64_THRESHOLD = 200\n\nKEYWORDS = (\n    'error', 'Error', 'failed', 'Fail',\n    'exception', 'panic',\n    \"Can't\", 'cannot',\n    'invalid', 'format'\n)\n\n\ndef has_long_base64(text: str) -> bool:\n    pattern = rf'[A-Za-z0-9+/=]{{{BASE64_THRESHOLD},}}'\n    return bool(re.search(pattern, text))\n\n\ndef json_ratio(text: str) -> float:\n    \"\"\"\n    Roughly detect JSON / structured noise ratio\n    \"\"\"\n    if not text:\n        return 0.0\n    json_chars = sum(text.count(c) for c in '{}[]\":,')\n    return json_chars / len(text)\n\n\ndef extract_key_info(text: str) -> str:\n    lines = (l.strip() for l in text.splitlines())\n    hits = [l for l in lines if any(k in l for k in KEYWORDS)]\n    return '\\n'.join(hits)\n\n\ndef should_drop_comment(raw: str) -> bool:\n    \"\"\"\n    Strong drop rules\n    \"\"\"\n    # 极端长度\n    if len(raw) > 8000:\n        return True\n\n    # csr + base64 = 直接丢弃\n    if '\"csr\"' in raw and has_long_base64(raw):\n        return True\n\n    # JSON 噪音占比过高\n    if json_ratio(raw) > 0.6:\n        return True\n\n    return False\n\n\ndef filter_comments(comments: list[str]) -> list[str]:\n    \"\"\"\n    Input : raw comments list\n    Output: cleaned & meaningful comments\n    \"\"\"\n    results = []\n\n    for raw in comments:\n        if not raw or not raw.strip():\n            continue\n        text = raw\n        # 第一层强过滤\n        if should_drop_comment(raw):\n            # 第二层：提取有意义内容\n            summary = extract_key_info(raw)\n            if not summary:\n                continue\n            else:\n                text = summary\n        # 最终截断\n        if len(text) > MAX_COMMENT_LEN:\n            text = text[:MAX_COMMENT_LEN] + '\\n[TRUNCATED]'\n\n        results.append(text)\n\n    return results\nfiltered = []\nfor item in items:\n    comments = item.get(\"json\", {}).get(\"comments\", [])\n    filtered = filter_comments(comments)\n\nreturn {'comments': filtered}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        755
+      ],
+      "id": "cc7b10e6-3fa7-403e-ba15-809315878518",
+      "name": "清理超长comments"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "65a43cc3-8f97-4e30-8385-907a4909b0e4",
+              "name": "comments",
+              "value": "={{ $('提取查询jira内容').item.json.comments }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        755
+      ],
+      "id": "d16e44cd-ec62-4686-96cf-e46efbd2d1d5",
+      "name": "提取comments"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\nMAX_DESC_LEN = 4000\nHARD_DROP_LEN = 12000\n\nKEYWORDS = (\n    'error', 'Error', 'failed', 'Fail',\n    'exception', 'panic', 'Oops',\n    'NULL pointer', 'invalid',\n    'BUG', 'Kernel panic',\n    'arm_copy_from_user'\n)\n\nHEX_DUMP_RE = re.compile(r'^\\s*[0-9a-f]{4,}:\\s*[0-9a-f ]+$', re.I)\nASM_RE = re.compile(r'^\\s*[0-9a-f]{4,}\\s+e[0-9a-f ]{10,}', re.I)\nSTACK_ADDR_RE = re.compile(r'^\\s*[0-9a-f]{8}\\s+[0-9a-f ]{16,}', re.I)\n\n\ndef extract_key_lines(text: str) -> list[str]:\n    lines = text.splitlines()\n    result = []\n    for l in lines:\n        if any(k in l for k in KEYWORDS):\n            result.append(l.strip())\n    return result\n\n\ndef extract_backtrace(text: str, limit=20) -> list[str]:\n    bt = []\n    for l in text.splitlines():\n        if ' from [' in l or l.strip().startswith('[<'):\n            bt.append(l.strip())\n        if len(bt) >= limit:\n            break\n    return bt\n\n\ndef clean_description(raw: str) -> str:\n    if not raw:\n        return \"\"\n\n    # 直接短内容返回\n    if len(raw) <= MAX_DESC_LEN:\n        return raw.strip()\n\n    lines = raw.splitlines()\n    cleaned = []\n\n    for l in lines:\n        if HEX_DUMP_RE.match(l):\n            continue\n        if ASM_RE.match(l):\n            continue\n        if STACK_ADDR_RE.match(l):\n            continue\n        cleaned.append(l)\n\n    text = \"\\n\".join(cleaned)\n\n    # 仍然超长 → 进入摘要模式\n    # if len(text) > HARD_DROP_LEN:\n    #     key_lines = extract_key_lines(text)\n    #     backtrace = extract_backtrace(text)\n\n    #     summary = []\n    #     if key_lines:\n    #         summary.append(\"=== Key Errors ===\")\n    #         summary.extend(key_lines[:30])\n\n    #     if backtrace:\n    #         summary.append(\"\\n=== Backtrace (partial) ===\")\n    #         summary.extend(backtrace)\n\n    #     text = \"\\n\".join(summary)\n\n    # 最终截断\n    half = MAX_DESC_LEN // 2\n\n    if len(text) > MAX_DESC_LEN and len(text) > half * 2:\n        text = (\n            text[:half]\n            + '\\n[TRUNCATED]\\n'\n            + text[-half:]\n        )\n\n    return text.strip()\n\n\n# n8n 主逻辑\nresults = []\n\nfor item in items:\n    data = item.get(\"json\", {})\n    desc = data.get(\"description\", \"\")\n\n    cleaned_desc = clean_description(desc)\n\n    data[\"description\"] = cleaned_desc\n    results.append({\"json\": data})\n\nreturn results\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2700,
+        755
+      ],
+      "id": "959b027c-f508-4af7-96d8-7729249c2df8",
+      "name": "清理超长description(str)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3b2bd327-ff49-465b-b574-e8aecfb7b7f0",
+              "name": "description",
+              "value": "={{ $('提取查询jira内容').item.json.description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2480,
+        755
+      ],
+      "id": "90e63489-2dfb-4c89-b73a-792619f5f547",
+      "name": "提取descrpition"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3581a354-e9d2-402d-919c-aba9d7452f5d",
+              "name": "summary",
+              "value": "={{ $('提取查询jira内容').item.json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "8208c8d5-faf2-4744-b0d5-2ea5ff67034a",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "16c8a72d-d935-487a-abb3-03c5abab74fd",
+              "name": "comments_list",
+              "value": "={{ $('去掉相似重复的comments').item.json.comments_list }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2920,
+        755
+      ],
+      "id": "4505ea51-112e-46c7-bd00-4ed833bda60a",
+      "name": "过滤之后的comments/descrption"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# n8n Python Code 节点示例\nimport math\n\n# 获取输入\nitem = items[0][\"json\"]\n\nsummary = item.get(\"summary\", \"\")\ndescription = item.get(\"description\", \"\")\ncomments = item.get(\"comments_list\", [])\n\n# 1️⃣ 合并内容，顺序：summary -> description -> comments\ncombined_lines = []\n\ndef add_lines(text):\n    if not text:\n        return\n    for line in text.splitlines():\n        line = line.strip()\n        # 跳过 URL 行\n        if line.startswith(\"http://\") or line.startswith(\"https://\"):\n            continue\n        combined_lines.append(line)\n\n\n# summary\nadd_lines(summary)\n\n# description\nadd_lines(description)\n\n# comments\nfor c in comments:\n    add_lines(c)\n\n# 2️⃣ 分块，每块最大4000字符，以完整行为单位\nMAX_CHARS = 4000\nchunks = []\ncurrent_chunk = \"\"\n\nfor line in combined_lines:\n    # +1 是为了加上换行符\n    if len(current_chunk) + len(line) + 1 > MAX_CHARS:\n        chunks.append({\"json\": {\"text\": current_chunk}})\n        current_chunk = line  # 新块从当前行开始\n    else:\n        if current_chunk:\n            current_chunk += \"\\n\" + line\n        else:\n            current_chunk = line\n\n# 添加最后一块\nif current_chunk:\n    chunks.append({\"json\": {\"text\": current_chunk}})\n\n# 3️⃣ 返回结果给 n8n\nreturn chunks\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3140,
+        755
+      ],
+      "id": "8a8e1e85-e684-4bdc-8b49-e56347b8f269",
+      "name": "合并后分块"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        755
+      ],
+      "id": "fbc24088-54a3-47e0-95ec-ed69eb5a8b0e",
+      "name": "Loop Over Items3"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\nimport json\n\ntest_fails = items[0][\"json\"][\"test_fails\"]\n\n# output_dict = json.loads(item)\n\n# test_fails = output_dict.get(\"test_fail\", [])\n\n\ntable_pattern = re.compile(\n    r\"([^\\s#]+)#([^\\s\\\",|]+)\"\n)\nfailed_tests = []\n# desc\nfor text in test_fails:\n  for m in table_pattern.finditer(text):\n      failed_tests.append((m.group(1).strip(), m.group(2).strip()))\n\n\nif not failed_tests:\n    table_pattern = re.compile(\n        r\"(\\btest[^\\s\\\"|]+\\b)\"\n    )\n    \n    # desc\n    for text in test_fails:\n      for m in table_pattern.finditer(text):\n          failed_tests.append((None, m.group(1).strip()))\n        \nif not failed_tests: \n    for text in test_fails:\n      for m in table_pattern.finditer(text):\n          failed_tests.append((test_fails, None))\n\n# 去重\nfailed_tests_unique = []\nseen = set()\nfor tc, ti in failed_tests:\n    key = f\"{tc}#{ti}\"\n    if key not in seen:\n        seen.add(key)\n        failed_tests_unique.append({\n            \"test_case\": tc,\n            \"test_item\": ti\n        })\n\n\nreturn {\"failed_tests\" : failed_tests_unique, \"failed_count\": len(failed_tests_unique)}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4340,
+        420
+      ],
+      "id": "4d1e7611-b3d8-4595-ae1c-42bcc32db99f",
+      "name": "提取VTS信息"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "test_fails"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        3650,
+        430
+      ],
+      "id": "1b5c3157-6139-4eac-a083-f6ddb3199809",
+      "name": "Aggregate4"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\nitem = items[0][\"json\"][\"output\"]\n\noutput_dict = json.loads(item)\n\ntest_fails = output_dict.get(\"test_fail\", [])\n\nreturn {\"test_fails\" : test_fails}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3940,
+        880
+      ],
+      "id": "c87fea6c-187b-44d0-9656-0b842bfce03b",
+      "name": "提取test_fails"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2d394887-9146-4727-adff-ef49a5eef0b4",
+              "leftValue": "={{ $('提取xts的模块、case、用例').item.json.xts_type }}",
+              "rightValue": "=NTS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3880,
+        440
+      ],
+      "id": "3d05fdc9-54ca-4b41-95a9-3d2a1aaacddf",
+      "name": "If6"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4760,
+        -220
+      ],
+      "id": "8c1633f0-90f1-4ba9-8372-26e31045f48b",
+      "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "failed_tests",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4540,
+        40
+      ],
+      "id": "a1b6cb35-8e15-48d9-8cb3-5ee03218d0c0",
+      "name": "Split Out2"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "getAll",
+        "limit": 10,
+        "options": {
+          "jql": "=text ~ \"\\\"{{ $json.failed_tests }}\\\"\" and \"Software Release\" = \"{{ $('查询jira,提取信息').first().json.fields.customfield_10300[0].value }}\" ORDER BY created DESC "
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        5260,
+        -200
+      ],
+      "id": "85278fff-471a-449c-903a-fb954be4cca0",
+      "name": "找到测试用例以前的记录3",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75a06464-b70f-4f8e-99b1-0ceaa9643edc",
+              "name": "jira_key",
+              "value": "={{ $json.key }}",
+              "type": "string"
+            },
+            {
+              "id": "75051220-9086-4aec-8137-7d33d147e3b1",
+              "name": "jira_source",
+              "value": "test_item",
+              "type": "string"
+            },
+            {
+              "id": "cde2b33c-fb8b-482e-914d-6b2946dd136b",
+              "name": "created_time",
+              "value": "={{ $('找到测试用例以前的记录3').item.json.fields.created }}",
+              "type": "string"
+            },
+            {
+              "id": "c122df3b-a08f-4a80-adc0-c70f1393d714",
+              "name": "failed_test",
+              "value": "={{ $('Loop Over Items4').item.json.failed_tests }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5700,
+        -180
+      ],
+      "id": "e9587f40-ef0a-44a6-89f3-b03749b43f38",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4980,
+        -400
+      ],
+      "id": "a0e74cf8-3a81-490f-b980-9e8f57186c89",
+      "name": "Aggregate5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "36955780-dae3-4502-bd9f-37d9d676db3a",
+              "leftValue": "={{ $json.failed_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4320,
+        140
+      ],
+      "id": "ceb5561f-f33d-4686-9a1a-9935cf8bcd6b",
+      "name": "If8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ec91970-7026-4690-a0ef-4b104b27446f",
+              "name": "data",
+              "value": "=没有提取到任何测试单元，暂不支持测试模块查询，检查后重试",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4540,
+        240
+      ],
+      "id": "f38236ed-fc6b-4ee9-9609-e7854343b1a9",
+      "name": "final_output2"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from datetime import datetime\n\n# n8n 输入\ndata = items[0][\"json\"][\"data\"]\ncur_jira_key = items[0][\"json\"][\"key\"]\n\n# jira_source 优先级\nSOURCE_ORDER = {\n    \"test_item\": 0,\n    \"test_case\": 1,\n    \"test_module\": 2,\n}\n\ndef parse_time(t):\n    \"\"\"\n    解析时间格式：\n    2026-01-20T19:16:39.000+0800\n    \"\"\"\n    return datetime.strptime(t, \"%Y-%m-%dT%H:%M:%S.%f%z\")\n\n# ---------------- 1️⃣ 按 jira_key 去重（保留最新） ----------------\nlatest_by_key = {}\n\nfor item in data:\n    key = item.get(\"jira_key\")\n    t = parse_time(item.get(\"created_time\"))\n\n    if key != cur_jira_key:\n      if key not in latest_by_key and key:\n          latest_by_key[key] = item\n      else:\n          old_time = parse_time(latest_by_key[key][\"created_time\"])\n          if t > old_time:\n              latest_by_key[key] = item\n\ndeduped_data = list(latest_by_key.values())\n\n# ---------------- 2️⃣ 排序 ----------------\ndata_sorted = sorted(\n    deduped_data,\n    key=lambda x: (\n        SOURCE_ORDER.get(x.get(\"jira_source\"), 99),\n        -parse_time(x.get(\"created_time\")).timestamp()\n    )\n)\n\ncount = len(data_sorted)\nif count == 0:\n  return [{\n    \"json\": {\n        \"data\": \"没有找到相似的jira\",\n        \"count\": count\n    }\n  }]\nreturn [{\n    \"json\": {\n        \"data\": data_sorted[:5],\n        \"count\": count\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5520,
+        -400
+      ],
+      "id": "378b6198-9a94-40e7-b64a-ebd99adc1881",
+      "name": "找的jira去重2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3a05e79e-3b99-4313-96af-c22dab5f319d",
+              "name": "data",
+              "value": "={{ $json.data }}",
+              "type": "array"
+            },
+            {
+              "id": "8adae005-7f23-4137-8cd3-bb625248174d",
+              "name": "key",
+              "value": "={{ $('查询jira').item.json.key }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5300,
+        -400
+      ],
+      "id": "733c306e-33ef-4d57-952e-dd048d0ae409",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\nimport json\n\ntest_fails = items[0][\"json\"][\"test_fails\"]\n\n# output_dict = json.loads(item)\n\n# test_fails = output_dict.get(\"test_fail\", [])\n\n\n# 去重\nfailed_tests_unique = []\nseen = set()\nfor ti in test_fails:\n    if ti not in seen:\n        seen.add(ti)\n        failed_tests_unique.append(ti)\n\n\nreturn {\"failed_tests\" : failed_tests_unique, \"failed_count\": len(failed_tests_unique)}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        220
+      ],
+      "id": "42055e1d-7d8f-405c-9956-f61c65565107",
+      "name": "提取NTS信息1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "items = _input.all()\n\nseen = set()\nout = []\n\nfor item in items:\n    data = item[\"json\"]\n    key = data.get(\"test_case\")  # 可只用 test_item\n\n    if key not in seen:\n        seen.add(key)\n        out.append({\"json\": data})\n\nreturn out\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4860,
+        760
+      ],
+      "id": "879ced25-f8c4-4ab1-b98e-1a6935b097a5",
+      "name": "对test_case去重"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "查询jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查询jira,提取信息": {
+      "main": [
+        [
+          {
+            "node": "Get many comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many comments": {
+      "main": [
+        [
+          {
+            "node": "合并comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查询jira": {
+      "main": [
+        [
+          {
+            "node": "查询jira,提取信息",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "合并comments": {
+      "main": [
+        [
+          {
+            "node": "提取查询jira内容",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取查询jira内容": {
+      "main": [
+        [
+          {
+            "node": "提取xts的模块、case、用例",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取xts的模块、case、用例": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "找到测试用例以前的记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "对test_case去重",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找到测试用例以前的记录": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "找到测试用例以前的记录1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找到测试用例以前的记录1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop Over Items2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "找到测试用例以前的记录2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找到测试用例以前的记录2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "查询jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "final_output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找的jira去重1": {
+      "main": [
+        []
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "提取test_module",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "final_output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "找的jira去重",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "找的jira去重1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取test_module": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "提取comments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "提取test_fails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "清理无关的内容Code": {
+      "main": [
+        [
+          {
+            "node": "清理超长comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "清理超长comments": {
+      "main": [
+        [
+          {
+            "node": "去掉相似重复的comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取comments": {
+      "main": [
+        [
+          {
+            "node": "清理无关的内容Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "去掉相似重复的comments": {
+      "main": [
+        [
+          {
+            "node": "提取descrpition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取descrpition": {
+      "main": [
+        [
+          {
+            "node": "清理超长description(str)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "清理超长description(str)": {
+      "main": [
+        [
+          {
+            "node": "过滤之后的comments/descrption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "过滤之后的comments/descrption": {
+      "main": [
+        [
+          {
+            "node": "合并后分块",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "合并后分块": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取VTS信息": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate4": {
+      "main": [
+        [
+          {
+            "node": "If6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取test_fails": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If6": {
+      "main": [
+        [
+          {
+            "node": "提取NTS信息1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "提取VTS信息",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items4": {
+      "main": [
+        [
+          {
+            "node": "Aggregate5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "找到测试用例以前的记录3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "找到测试用例以前的记录3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If8": {
+      "main": [
+        [
+          {
+            "node": "Split Out2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "final_output2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "找的jira去重2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate5": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取NTS信息1": {
+      "main": [
+        [
+          {
+            "node": "If8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "对test_case去重": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6a908956-a32b-44b6-856c-37cabd0c2af1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "kPZ1sHex81rooPFQ",
+  "tags": []
+}
