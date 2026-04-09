@@ -1,0 +1,1592 @@
+{
+  "name": "0320-代码合入情况",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        -80
+      ],
+      "id": "95c2ae6d-ddef-47c3-956b-8c2af3ec1d35",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2c3aaed-cdc4-4014-aeef-09723edc74cf",
+              "name": "body",
+              "value": "={{ $json.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        -40
+      ],
+      "id": "54fc0255-d984-4a0e-8e39-545cfbcae142",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "body",
+              "renameField": true,
+              "outputFieldName": "comments"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        -40
+      ],
+      "id": "78a706d7-a88a-4e9d-88c6-3b2874c94732",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://scgit.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "50dae563-1f31-4e11-9129-e3c8e565a778"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "scgit"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d7f6dde7-2074-4f4f-a619-4bccefbb67f5",
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://source.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "source"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "130bdf6a-baa7-48b8-b502-35b41571bbba",
+                    "leftValue": "={{ $json.url }}",
+                    "rightValue": "https://aml-code-master.amlogic.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "aml-code-master"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1920,
+        -40
+      ],
+      "id": "31eb70dc-becd-4a03-bd26-0c79ed6ad4bd",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "all_patches.change_proposed_change_ids",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        -40
+      ],
+      "id": "328c1dfe-8b17-4261-8a74-b2a6f326ca91",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "59edfd73-4382-4622-88e6-5a4c7269dbe4",
+              "name": "change_id",
+              "value": "={{ $json.change_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5af19c68-3388-4d17-bbab-b92b1b336265",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "fceceffc-9886-464e-8457-a3fca7c5740f",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            },
+            {
+              "id": "a9124c4a-3a75-43ff-a8f3-bebc056e6383",
+              "name": "url",
+              "value": "={{ $('Switch').item.json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2660,
+        -20
+      ],
+      "id": "3f930fc4-3327-42b3-8283-3ba4525e5d67",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "resource": "issueComment",
+        "operation": "getAll",
+        "issueKey": "={{ $json.similar_jira_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        760,
+        -40
+      ],
+      "id": "4eb79345-d6c7-40bc-be06-01bfbc292065",
+      "name": "similar_jira",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jiraVersion": "server",
+        "operation": "get",
+        "issueKey": "={{ $json.user_jira_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        520,
+        200
+      ],
+      "id": "13df47ce-c8b3-43cd-8ef8-6884b9818559",
+      "name": "Get an issue",
+      "credentials": {
+        "jiraSoftwareServerApi": {
+          "id": "spVxviV4L8bgyq8u",
+          "name": "Jira SW Cloud account-nan.li"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b63c6cd2-d12a-4e82-a6a5-4b5c131e501b",
+              "name": "project_id",
+              "value": "={{ $json.fields.customfield_10407[0].value }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        840,
+        200
+      ],
+      "id": "ed223e07-4db5-4593-ae06-17824a2c749b",
+      "name": "提取软件版本"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/amlogic/RAG/jira_set/A_REPO_PATH/repo_route.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        520,
+        440
+      ],
+      "id": "dde696d3-8701-4b4a-be40-d32925993ce1",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        900,
+        420
+      ],
+      "id": "6dc3fa48-37b2-45e5-9df7-2bd27bf2f7b7",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1140,
+        220
+      ],
+      "id": "4e6a26b3-01fd-4a83-a206-156c6572886f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# n8n 输入\nproject_item = items[0][\"json\"]\ndata_item = items[1][\"json\"]\n\nproject_id = project_item.get(\"project_id\")\ndata_list = data_item.get(\"data\", [])\n\nrepo_path = None\n\nfor row in data_list:\n    if row.get(\"Project ID\") == project_id:\n        repo_path = row.get(\"repo_path\")\n        break\n\nreturn [\n    {\n        \"json\": {\n            \"project_id\": project_id,\n            \"exists\": repo_path is not None,\n            \"repo_path\": repo_path\n        }\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        220
+      ],
+      "id": "cb1ecae8-4e83-4c05-aa3f-2322c3a27bc9",
+      "name": "检查project_id 是否存在,提取仓库路径"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.repo_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1720,
+        220
+      ],
+      "id": "cd6c0eb4-8acd-402c-a5f8-1f36787ea832",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1940,
+        220
+      ],
+      "id": "ed1990c0-5c73-4e60-903d-3350e5a2d6a8",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/source_get_change_info/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        80
+      ],
+      "id": "20f667d7-cfac-4e33-8823-1420d23a8076",
+      "name": "source_get_change_info",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/aml_code_master_get_change_info/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2960,
+        -120
+      ],
+      "id": "5ff9f4af-8dfa-475a-a7fa-6a7b7fa89453",
+      "name": "aml_code_master_get_change_info",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/source_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2180,
+        -40
+      ],
+      "id": "060c6707-db6c-4717-94bb-9f2b60563d25",
+      "name": "source_get_change_detail"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/aml_code_master_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        140
+      ],
+      "id": "0aec563a-c969-4211-80a5-70705eeeff61",
+      "name": "aml_code_master_get_change_detail"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:1234/scgit_get_change_detail/{{ $json.change_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2180,
+        -200
+      ],
+      "id": "abf68718-a6f6-4e46-a411-c1815e6f4a82",
+      "name": "scgit_get_change_detail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4486e8a-2a48-4508-9bac-8648b5729122",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "MERGED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4100,
+        -20
+      ],
+      "id": "54f0a641-7676-46a6-bde4-5d11af94dbdc",
+      "name": "是否merge了1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "02f1517d-c360-472a-b099-1e77fb24cd83",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            },
+            {
+              "id": "ed881951-6fd7-4fa3-9b59-4875eab7cc85",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            },
+            {
+              "id": "7f10373b-5052-4300-bacc-b7b27eb40c32",
+              "name": "patch_url",
+              "value": "={{ $('Split Out').item.json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4720,
+        180
+      ],
+      "id": "11753460-5b94-4430-b473-61edba04ab7b",
+      "name": "提取project和branch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18d62f69-685a-47bc-bab5-ec660b9dc1e0",
+              "name": "patch_url",
+              "value": "={{ $('Switch').second().json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4520,
+        -140
+      ],
+      "id": "23082763-26ea-46e5-97de-d515efe76492",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5063982f-025a-43e8-93a1-825a336b520f",
+              "leftValue": "={{ $json.data_xml[0] }}",
+              "rightValue": "=name=\"{{ $json.project }}\"",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "4e13ce65-49bb-4c2a-a77d-260daaaf2caf",
+              "leftValue": "={{ $json.data_xml[0] }}",
+              "rightValue": "={{ $json.branch }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6940,
+        0
+      ],
+      "id": "fb10fb3e-2546-4208-aa25-08f882d9c48a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "project_branches"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5340,
+        160
+      ],
+      "id": "7c8cb689-33f3-4101-8ad1-34b98416c253",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nproject_branches = []\nfor item in _input.all():\n  project_full = item.json.project\n  parts = project_full.split(\"/\")\n  short_project = \"/\".join(parts[-2:]) if len(parts) >= 2 else project_full\n  project_branches.append({'project': short_project,\n                         'branch': item.json.branch,\n                         'patch_url': item.json.patch_url})\nreturn {'project_branches': project_branches}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4940,
+        180
+      ],
+      "id": "88bb393a-04bf-4416-884b-bd60dc4ff2cc",
+      "name": "project改成相对路径"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "result",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        6680,
+        0
+      ],
+      "id": "25399e6f-523a-44d8-85aa-d6c3d39cec16",
+      "name": "拆分每个patch"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        5940,
+        0
+      ],
+      "id": "41a3211d-6dd1-42af-bc87-f8b7a61501ca",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "item0 = items[0][\"json\"]\nitem1 = items[0][\"json\"]\nresult = []\nproject_branches = item0.get(\"project_branches\", [])\nif not project_branches:\n  return {\"result\": result}\n\ndata = item1.get(\"data\", \"\")\nif not data:\n  return {\"result\": result}\n\n\nfor pb in project_branches:\n    merged = pb\n    merged[\"data_xml\"] = data\n    result.append(merged)\n\nreturn {\"result\": result}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6420,
+        0
+      ],
+      "id": "3fe5f3ad-2bff-427f-916a-20deca90a92a",
+      "name": "合并data_xml"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0c63d044-07bf-41fd-9ddc-3d610b8898f0",
+              "name": "merge_patch_url",
+              "value": "={{ $json.patch_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7160,
+        -100
+      ],
+      "id": "8f67628d-f09d-41f0-a363-465731ae1b01",
+      "name": "已合入"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        7400,
+        -320
+      ],
+      "id": "23b155be-d602-4f68-8aad-4e9d1dc01d13",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\n# n8n 输入\nitem = items[0][\"json\"]\ncomments = item.get(\"comments\", [])\n\nresult = []\n\n# http / https URL 正则\nurl_pattern = re.compile(r'https?://[^\\s\\]\\)]+')\n# 提取 URL 末尾数字（change id）\nchange_id_pattern = re.compile(r'/(\\d+)$')\nall_urls = []\nseen = set()\nfor comment in comments:\n    if not isinstance(comment, str):\n        continue\n\n    # 只处理包含 Change proposed 的 comment\n    if \"Change proposed\" not in comment:\n        continue\n\n    urls = url_pattern.findall(comment)\n    \n    for url in urls:\n        match = change_id_pattern.search(url)\n        if not match:\n            continue\n        if url not in seen:\n          all_urls.append(url)\n          seen.add(url)\n          result.append({\n              \"url\": url,\n              \"change_id\": match.group(1)\n          })\n    \nreturn [\n    {\n        \"all_patches\": {\n            \"change_proposed_change_ids\": result,\n            \"all_patches\": \" ; \".join(all_urls)\n        }\n    }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        -40
+      ],
+      "id": "031b8908-aa38-40e1-9577-ff510f225617",
+      "name": "提取当前的jira的patch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0e26a6f6-8c53-4f3e-8bc0-445dcf9773fa",
+              "name": "all_patches",
+              "value": "={{ $json.all_patches.all_patches }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1640,
+        -360
+      ],
+      "id": "236c2fa5-9251-4805-bc71-494ea7ca007c",
+      "name": "提取所有的patches"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "all_patches"
+            },
+            {
+              "fieldToAggregate": "merge_patch_url"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        7620,
+        -320
+      ],
+      "id": "2e96578f-53db-4be8-a829-374c2fa970a0",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da2d5c0e-5f07-40b8-b4ee-23ea283e6131",
+              "name": "output",
+              "value": "=**{{ $('入口').item.json.similar_jira_id }}**所有的patch:{{ $json.all_patches_str }} <br> **{{ $('入口').item.json.user_jira_id }}**已经合入的patch:{{ $json.merge_patch_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8220,
+        -300
+      ],
+      "id": "fac1d228-c382-4e6c-92e9-0f5f63a1d29e",
+      "name": "output"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nproject_branches = []\nfor item in _input.all():\n  project_branches.append({'project': \"NULL\",\n                         'branch': \"NULL\",\n                         'patch_url': item.json.patch_url})\nreturn {'project_branches': project_branches}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4740,
+        -140
+      ],
+      "id": "391d95a9-aae6-4cad-87bd-6cc527b54bd5",
+      "name": "出错处理"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "similar_jira_id"
+            },
+            {
+              "name": "user_jira_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -520,
+        -260
+      ],
+      "id": "c17a01f4-0f66-44f2-b611-26ab0d465b97",
+      "name": "入口"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6db32e51-f93a-49da-a479-ce4d0e814886",
+              "name": "similar_jira_id",
+              "value": "OTT-75987",
+              "type": "string"
+            },
+            {
+              "id": "f33cc2c1-1d68-4f48-ab24-a7a97016bc59",
+              "name": "user_jira_id",
+              "value": "OTT-75987",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -460,
+        -40
+      ],
+      "id": "9c19dd1c-5a25-48c3-81b1-006ca2321e22",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "project_branches"
+            },
+            {
+              "fieldToAggregate": "data"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        6160,
+        0
+      ],
+      "id": "deadf8ac-b454-4823-bedc-a5c7800430c9",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2420,
+        -20
+      ],
+      "id": "792288a5-2383-4fc1-b402-918e962c3e02",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3460,
+        -40
+      ],
+      "id": "e754bec5-9843-4d36-9f49-e8912f306232",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9aa0da16-786e-48ad-814e-0066e729bb89",
+              "name": "url",
+              "value": "={{ $('Edit Fields1').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "928b9a2c-cd1d-4135-9420-03f015e2da7d",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6285b5e1-7013-4b93-9027-467f79b29792",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            },
+            {
+              "id": "cd7ae91a-a1ec-4612-a642-0684b49ccbdb",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3180,
+        60
+      ],
+      "id": "e0ed448f-0c64-4ebc-8e5f-9c72a93c8708",
+      "name": "Edit Fields7"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9aa0da16-786e-48ad-814e-0066e729bb89",
+              "name": "url",
+              "value": "={{ $('Edit Fields1').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "928b9a2c-cd1d-4135-9420-03f015e2da7d",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6285b5e1-7013-4b93-9027-467f79b29792",
+              "name": "project",
+              "value": "={{ $json.project }}",
+              "type": "string"
+            },
+            {
+              "id": "cd7ae91a-a1ec-4612-a642-0684b49ccbdb",
+              "name": "branch",
+              "value": "={{ $json.branch }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3180,
+        -120
+      ],
+      "id": "5275bf17-713d-40ca-a3b8-4810cefe4562",
+      "name": "Edit Fields9"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\n# 读取 n8n 输入\nitems_input = items  # items 本身就是 n8n 输入列表\n\noutput_items = []\n\nfor item in items_input:\n    data = item.get(\"json\", {})\n    \n    all_patches = data.get(\"all_patches\", [])\n    merge_patch_url = data.get(\"merge_patch_url\", [])\n\n    # 如果 merge_patch_url 有多个元素，用分号拼接\n    merge_patch_str = \" ; \".join(merge_patch_url) if merge_patch_url else \"\"\n\n    # 输出 JSON 序列化的形式\n    output_items.append({\n        \"json\": {\n            \"all_patches\": all_patches,\n            \"all_patches_str\" : all_patches[0],\n            \"merge_patch_url\": merge_patch_str\n        }\n    })\n\n# 返回给 n8n\nreturn output_items\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7840,
+        -320
+      ],
+      "id": "9a1e8100-99cd-482f-9816-1c1084c7d025",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "url": "http://10.18.11.98:1236/collect_patch_urls",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "similar_jira_id",
+              "value": "={{ $json.similar_jira_id }}"
+            },
+            {
+              "name": "user_jira_id",
+              "value": "={{ $json.user_jira_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        -260
+      ],
+      "id": "e1a179f9-a25c-4712-be10-792259bdebb6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da2d5c0e-5f07-40b8-b4ee-23ea283e6131",
+              "name": "output",
+              "value": "=**{{ $('入口').item.json.similar_jira_id }}**所有的patch:{{ $json.all_patches_str }} <br> 是强制patch url:{{ $json.released_patches }} <br> 不是强制patch url:{{ $json.unreleased_patches }} <br> **{{ $('入口').item.json.user_jira_id }}**已经合入的patch:{{ $json.merge_patch_url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        420,
+        -260
+      ],
+      "id": "1e508a8e-8491-4f67-aac2-6823c2e47590",
+      "name": "output2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import json\n\n# 读取 n8n 输入\nitems_input = items  # items 本身就是 n8n 输入列表\n\noutput_items = []\n\nunreleased_patches = []\nreleased_patches = []\nfor item in items_input:\n    data = item.get(\"json\", {})\n    \n    all_patches = data.get(\"all_urls\", [])\n    merge_patch_url = data.get(\"merge_urls\", [])\n    released_patches_list = data.get(\"released_patches\", [])\n    unreleased_patches_list = data.get(\"unreleased_patches\", [])\n    # 如果 merge_patch_url 有多个元素，用分号拼接\n    merge_patch_str = \" ; \".join(merge_patch_url) if merge_patch_url else \"\"\n    all_patches_str = \" ; \".join(all_patches) if all_patches else \"\"\n    for released_patch in released_patches_list:\n      patch_url = released_patch.get(\"patch_url\") or \"\"\n      patch_path = released_patch.get(\"patch_path\") or \"\"\n  \n      if patch_path:\n          released_patches.append(\"{} ( {} )\".format(patch_url, patch_path))\n      else:\n          released_patches.append(\"{}\".format(patch_url))\n\n\n    for unreleased_patch in unreleased_patches_list:\n        patch_url = unreleased_patch.get(\"patch_url\") or \"\"\n        patch_path = unreleased_patch.get(\"patch_path\") or \"\"\n    \n        if patch_path:\n            unreleased_patches.append(\"{} ( {} )\".format(patch_url, patch_path))\n        else:\n            unreleased_patches.append(\"{}\".format(patch_url))\n    \n    \n    released_patches_str = \" ; \".join(released_patches) if released_patches else \"\"\n    unreleased_patches_str = \" ; \".join(unreleased_patches) if unreleased_patches else \"\"\n\n    # 输出 JSON 序列化的形式\n    output_items.append({\n        \"json\": {\n            \"all_patches\": all_patches,\n            \"all_patches_str\" : all_patches_str,\n            \"merge_patch_url\": merge_patch_str,\n            \"unreleased_patches\": unreleased_patches_str,\n            \"released_patches\": released_patches_str\n        }\n    })\n\n# 返回给 n8n\nreturn output_items\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -260
+      ],
+      "id": "3ab8249e-e207-41ab-a4dd-3af6f7c68805",
+      "name": "Code1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "提取当前的jira的patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "scgit_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "source_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "aml_code_master_get_change_detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "similar_jira": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get an issue": {
+      "main": [
+        [
+          {
+            "node": "提取软件版本",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取软件版本": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "检查project_id 是否存在,提取仓库路径",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "检查project_id 是否存在,提取仓库路径": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "aml_code_master_get_change_info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "source_get_change_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "source_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "aml_code_master_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "scgit_get_change_detail": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "source_get_change_info": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aml_code_master_get_change_info": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取project和branch": {
+      "main": [
+        [
+          {
+            "node": "project改成相对路径",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否merge了1": {
+      "main": [
+        [
+          {
+            "node": "提取project和branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "project改成相对路径": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "拆分每个patch": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "合并data_xml": {
+      "main": [
+        [
+          {
+            "node": "拆分每个patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "已合入",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "已合入": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "提取当前的jira的patch": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "提取所有的patches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "提取所有的patches": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "出错处理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "出错处理": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "入口": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get an issue",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "similar_jira",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "合并data_xml",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "是否merge了1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields7": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields9": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "output2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Shanghai",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "6520483f-8cae-43ac-a863-1cec9b97ceb6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3316d3a669707399365a972fac1791df09a873aaede66b4910db7865ebdb0cf1"
+  },
+  "id": "fU0ZFLzRZ6WlCY8q",
+  "tags": []
+}
